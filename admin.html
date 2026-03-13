@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ATGenius Admin — Thynk Success</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f0f4ff;--card:#fff;--bd:#e2e8f0;--bd2:#cbd5e1;
+  --acc:#2563eb;--acc2:#1d4ed8;--green:#059669;--red:#dc2626;--orange:#ea580c;
+  --text:#0f172a;--m:#64748b;--m2:#94a3b8;--s2:#f8faff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--acc),#7c3aed,var(--orange));z-index:100}
+
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px}
+.login-card{background:var(--card);border:1px solid var(--bd);border-radius:20px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,.08);text-align:center}
+.login-card .brand{font-family:'Sora',sans-serif;font-size:12px;font-weight:700;color:var(--acc);background:#eff6ff;border:1px solid #bfdbfe;padding:6px 16px;border-radius:999px;display:inline-block;margin-bottom:20px}
+.login-card h2{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;margin-bottom:6px}
+.login-card p{color:var(--m);font-size:14px;margin-bottom:28px}
+.login-card input{width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:12px 14px;font-size:15px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .2s;margin-bottom:14px;color:var(--text)}
+.login-card input:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.login-card button{width:100%;padding:13px;border:none;border-radius:10px;background:var(--acc);color:#fff;font-family:'Sora',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:all .2s}
+.login-card button:hover{background:var(--acc2)}
+.lerr{color:var(--red);font-size:13px;margin-top:8px;display:none}
+
+#mainScreen{display:none;padding:28px 20px 60px;max-width:1200px;margin:0 auto}
+.top-bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.top-bar h1{font-family:'Sora',sans-serif;font-size:22px;font-weight:800}
+.top-bar h1 span{color:var(--acc)}
+.top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.badge-live{background:#ecfdf5;border:1px solid #a7f3d0;color:var(--green);font-size:11px;font-weight:700;padding:5px 12px;border-radius:999px;display:flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;background:var(--green);border-radius:50%;animation:pulse 1.5s infinite}
+.btn-sm{padding:8px 16px;border-radius:9px;font-family:'Sora',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .2s;border:1.5px solid var(--bd);background:var(--card);color:var(--m)}
+.btn-sm:hover{border-color:var(--bd2);color:var(--text)}
+.btn-sm.danger{border-color:#fecaca;color:var(--red)}
+.btn-sm.danger:hover{background:#fef2f2}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+.stat{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.stat-label{font-size:11px;font-weight:600;color:var(--m2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.stat-val{font-family:'Sora',sans-serif;font-size:28px;font-weight:800;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--m);margin-top:3px}
+.stat.green .stat-val{color:var(--green)}
+.stat.blue .stat-val{color:var(--acc)}
+.stat.red .stat-val{color:var(--red)}
+.stat.orange .stat-val{color:var(--orange)}
+
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:20px;margin-bottom:18px;box-shadow:0 2px 8px rgba(0,0,0,.04)}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.card-hdr h3{font-family:'Sora',sans-serif;font-size:14px;font-weight:700;display:flex;align-items:center;gap:7px}
+.card-hdr h3::before{content:'';width:3px;height:14px;background:var(--acc);border-radius:2px}
+
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.filters input,.filters select{border:1.5px solid var(--bd);border-radius:9px;padding:8px 12px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;color:var(--text);background:#fff;transition:border-color .2s}
+.filters input{flex:1;min-width:180px}
+.filters input:focus,.filters select:focus{border-color:var(--acc)}
+
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{background:var(--s2);color:var(--m);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;padding:10px 12px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
+tbody td{padding:11px 12px;border-bottom:1px solid var(--bd);color:var(--text);vertical-align:middle}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:#fafbff}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700}
+.badge-paid{background:#ecfdf5;color:var(--green)}
+.badge-failed{background:#fef2f2;color:var(--red)}
+.badge-pending{background:#fff7ed;color:var(--orange)}
+.badge-initiated{background:#eff6ff;color:var(--acc)}
+.badge-refunded{background:#f3f4f6;color:#374151}
+.btn-copy{background:none;border:none;cursor:pointer;color:var(--m2);font-size:12px;padding:2px 6px;border-radius:5px;transition:all .2s}
+.btn-copy:hover{background:var(--s2);color:var(--text)}
+
+.bk-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:600px){.bk-grid{grid-template-columns:1fr}}
+.bk-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--bd);font-size:13px}
+.bk-row:last-child{border-bottom:none}
+.bk-lbl{color:var(--m)}
+.bk-val{font-weight:600;color:var(--text)}
+
+.refresh-info{font-size:11px;color:var(--m2);display:flex;align-items:center;gap:5px}
+.spinning{display:inline-block;animation:spin .8s linear infinite}
+.empty{text-align:center;padding:40px 20px;color:var(--m2);font-size:13px}
+
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="brand">🧠 Thynk Success</div>
+    <h2>Admin Dashboard</h2>
+    <p>ATGenius Registration Management</p>
+    <input type="password" id="pwdInput" placeholder="Enter admin password">
+    <button onclick="doLogin()">Login →</button>
+    <div class="lerr" id="lerr">❌ Incorrect password. Please try again.</div>
+  </div>
+</div>
+
+<div id="mainScreen">
+  <div class="top-bar">
+    <div>
+      <h1>ATGenius <span>Admin</span></h1>
+      <div style="font-size:13px;color:var(--m);margin-top:3px">Thynk Success · Registration Dashboard</div>
+    </div>
+    <div class="top-actions">
+      <div class="badge-live"><div class="dot"></div> Live</div>
+      <div class="refresh-info"><span id="refreshSpinner"></span><span id="lastRefresh">Fetching…</span></div>
+      <button class="btn-sm" onclick="loadData()">↺ Refresh</button>
+      <button class="btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      <button class="btn-sm danger" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-label">Total Registrations</div><div class="stat-val" id="sTotal">—</div><div class="stat-sub">All time</div></div>
+    <div class="stat green"><div class="stat-label">Confirmed Paid</div><div class="stat-val" id="sPaid">—</div><div class="stat-sub">Payment received</div></div>
+    <div class="stat blue"><div class="stat-label">Revenue Collected</div><div class="stat-val" id="sRev">—</div><div class="stat-sub">From paid entries</div></div>
+    <div class="stat orange"><div class="stat-label">Pending / Initiated</div><div class="stat-val" id="sPend">—</div><div class="stat-sub">Awaiting payment</div></div>
+    <div class="stat red"><div class="stat-label">Failed Payments</div><div class="stat-val" id="sFail">—</div><div class="stat-sub">To follow up</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr">
+      <h3>All Registrations</h3>
+      <span id="rowCount" style="font-size:12px;color:var(--m)">—</span>
+    </div>
+    <div class="filters">
+      <input type="text" id="search" placeholder="Search name, phone, school, email…" oninput="renderTable()">
+      <select id="filterStatus" onchange="renderTable()">
+        <option value="">All Status</option>
+        <option>Paid</option><option>Failed</option><option>Pending</option><option>Initiated</option><option>Refunded</option>
+      </select>
+      <select id="filterGW" onchange="renderTable()">
+        <option value="">All Gateways</option>
+        <option>Razorpay</option><option>Easebuzz</option>
+      </select>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Date / Time</th><th>Student</th><th>Class</th>
+            <th>School / City</th><th>Parent</th><th>Phone</th><th>Email</th>
+            <th>Gateway</th><th>Status</th><th>Discount</th><th>Amount</th><th>Payment ID</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+      <div class="empty" id="emptyMsg" style="display:none">No records found.</div>
+    </div>
+  </div>
+
+  <div class="bk-grid">
+    <div class="card">
+      <div class="card-hdr"><h3>Gateway Breakdown</h3></div>
+      <div id="gwBreakdown"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="card">
+      <div class="card-hdr"><h3>Class / Grade</h3></div>
+      <div id="classBreakdown"><div class="empty">Loading…</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><h3>Discount Code Usage</h3></div>
+    <div id="discBreakdown"><div class="empty">Loading…</div></div>
+  </div>
+</div>
+
+<script>
+const ADMIN_PASS = 'Thynk@2026';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbws3wYyJptTDscu3s8X9VBCiW2fmcLkJmvmVNXm1n7YQb6WzQIaJlghNIDqt_p4PJUDxg/exec';
+let allRows = [], autoTimer;
+
+document.getElementById('pwdInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+
+function doLogin() {
+  if (document.getElementById('pwdInput').value === ADMIN_PASS) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    loadData();
+    autoTimer = setInterval(loadData, 30000);
+  } else {
+    document.getElementById('lerr').style.display = 'block';
+    document.getElementById('pwdInput').value = '';
+  }
+}
+
+function doLogout() {
+  clearInterval(autoTimer);
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('mainScreen').style.display = 'none';
+  document.getElementById('pwdInput').value = '';
+  document.getElementById('lerr').style.display = 'none';
+}
+
+async function loadData() {
+  document.getElementById('refreshSpinner').innerHTML = '<span class="spinning">↻</span>&nbsp;';
+  try {
+    const res  = await fetch(SHEETS_URL + '?action=get&t=' + Date.now());
+    const data = await res.json();
+    allRows = data.rows || [];
+    renderStats(); renderTable(); renderBreakdowns();
+    document.getElementById('lastRefresh').textContent = 'Updated ' + new Date().toLocaleTimeString();
+  } catch(e) {
+    document.getElementById('lastRefresh').textContent = 'Error — retrying…';
+  }
+  document.getElementById('refreshSpinner').innerHTML = '';
+}
+
+function renderStats() {
+  const paid = allRows.filter(r => r.status==='Paid');
+  document.getElementById('sTotal').textContent = allRows.length;
+  document.getElementById('sPaid').textContent  = paid.length;
+  document.getElementById('sPend').textContent  = allRows.filter(r => r.status==='Pending'||r.status==='Initiated').length;
+  document.getElementById('sFail').textContent  = allRows.filter(r => r.status==='Failed').length;
+  document.getElementById('sRev').textContent   = '₹' + paid.reduce((s,r)=>s+(Number(r.finalAmount)||0),0).toLocaleString('en-IN');
+}
+
+function renderTable() {
+  const q  = document.getElementById('search').value.toLowerCase();
+  const st = document.getElementById('filterStatus').value;
+  const gw = document.getElementById('filterGW').value;
+  const rows = allRows.filter(r => {
+    const hay = [r.studentName,r.parentName,r.contactPhone,r.schoolName,r.city,r.contactEmail].join(' ').toLowerCase();
+    return (!q||hay.includes(q))&&(!st||r.status===st)&&(!gw||r.gateway===gw);
+  });
+  document.getElementById('rowCount').textContent = rows.length+' record'+(rows.length!==1?'s':'');
+  const tbody = document.getElementById('tbody');
+  if (!rows.length) { tbody.innerHTML=''; document.getElementById('emptyMsg').style.display='block'; return; }
+  document.getElementById('emptyMsg').style.display='none';
+  tbody.innerHTML = rows.map((r,i) => `
+    <tr style="animation:fadeIn .2s ${i*.02}s both">
+      <td style="color:var(--m2);font-size:11px">${i+1}</td>
+      <td style="font-size:11px;color:var(--m);white-space:nowrap">${esc(r.date||'')} <br>${esc(r.time||'')}</td>
+      <td style="font-weight:600">${esc(r.studentName||'')}</td>
+      <td style="white-space:nowrap">${esc(r.classGrade||'')}</td>
+      <td style="font-size:12px">${esc(r.schoolName||'')}${r.city?'<br><span style="color:var(--m)">'+esc(r.city)+'</span>':''}</td>
+      <td>${esc(r.parentName||'')}</td>
+      <td><a href="tel:${esc(r.contactPhone)}" style="color:var(--acc);font-weight:600;text-decoration:none">${esc(r.contactPhone||'')}</a></td>
+      <td style="font-size:12px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.contactEmail||'')}</td>
+      <td><span style="font-size:12px;font-weight:700;color:${r.gateway==='Razorpay'?'#3395ff':'#f97316'}">${esc(r.gateway||'')}</span></td>
+      <td><span class="badge badge-${(r.status||'pending').toLowerCase()}">${esc(r.status||'Pending')}</span></td>
+      <td style="font-size:12px;color:var(--green)">${r.discountCode?esc(r.discountCode)+'<br><span style="color:var(--m);font-size:11px">₹'+fmt(r.discountAmt)+' off</span>':'—'}</td>
+      <td style="font-weight:700;color:var(--acc)">₹${fmt(r.finalAmount||r.baseAmount||1200)}</td>
+      <td style="font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.paymentId||'')}">
+        ${r.paymentId?esc(r.paymentId.substring(0,12))+'… <button class="btn-copy" onclick="copyText(\''+esc(r.paymentId||'')+'\')">⧉</button>':'—'}
+      </td>
+    </tr>`).join('');
+}
+
+function renderBreakdowns() {
+  const gwMap={}, clMap={}, dcMap={};
+  allRows.forEach(r=>{
+    gwMap[r.gateway||'Unknown']=(gwMap[r.gateway||'Unknown']||0)+1;
+    clMap[r.classGrade||'Unknown']=(clMap[r.classGrade||'Unknown']||0)+1;
+    if(r.discountCode) dcMap[r.discountCode]=(dcMap[r.discountCode]||0)+1;
+  });
+  const bk = (map) => Object.entries(map).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="bk-row"><span class="bk-lbl">${esc(k)}</span><span class="bk-val">${v}</span></div>`).join('');
+  document.getElementById('gwBreakdown').innerHTML    = Object.keys(gwMap).length ? bk(gwMap) : '<div class="empty">No data</div>';
+  document.getElementById('classBreakdown').innerHTML = Object.keys(clMap).length ? bk(clMap) : '<div class="empty">No data</div>';
+  document.getElementById('discBreakdown').innerHTML  = Object.keys(dcMap).length ? bk(dcMap) : '<div class="empty">No discount codes used yet</div>';
+}
+
+function exportCSV() {
+  if(!allRows.length){alert('No data to export.');return;}
+  const h = ['Date','Time','Student Name','Parent Name','Phone','Email','School','City','Class','Gender','Gateway','Status','Base Amount','Discount Code','Discount Amt','Final Amount','Payment ID'];
+  const rows = allRows.map(r=>[r.date,r.time,r.studentName,r.parentName,r.contactPhone,r.contactEmail,r.schoolName,r.city,r.classGrade,r.gender,r.gateway,r.status,r.baseAmount,r.discountCode,r.discountAmt,r.finalAmount,r.paymentId].map(v=>'"'+(v||'').toString().replace(/"/g,'""')+'"').join(','));
+  const csv=[h.join(','),...rows].join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='ATGenius_Registrations_'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+}
+
+function copyText(t){navigator.clipboard.writeText(t).then(()=>alert('Copied: '+t));}
+function fmt(n){return Number(n||0).toLocaleString('en-IN');}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+</script>
+</body>
+</html>
