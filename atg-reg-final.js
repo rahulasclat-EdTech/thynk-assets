@@ -340,7 +340,7 @@ async function startEasebuzz() {
     }
 
     // Redirect browser to Easebuzz payment page with access_key
-    window.location.href = 'https://pay.easebuzz.in/pay/init/' + result.access_key;
+    window.location.href = 'https://pay.easebuzz.in/pay/init?access_key=' + result.access_key;
 
   } catch(e) {
     hideLoader();
