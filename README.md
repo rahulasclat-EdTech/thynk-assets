@@ -1,0 +1,2 @@
+# thynk-assets
+For registration
