@@ -51,6 +51,19 @@ var CFG = {
   redirectURL:   'https://thynksuccess.com'
 };
 
+// ── GATEWAY SEQUENCE ─────────────────────────────────────────────
+// Change the order below to reprioritize gateways.
+// Remove a gateway from the list to hide it completely.
+// Options: 'cf' (Cashfree), 'rzp' (Razorpay), 'eb' (Easebuzz)
+// ─────────────────────────────────────────────────────────────────
+var GATEWAY_SEQUENCE = ['cf', 'rzp', 'eb'];
+
+var GATEWAY_LABELS = {
+  cf:  { name: 'Cashfree',  color: '#2563eb', selClass: 'sel-cf'  },
+  rzp: { name: 'Razorpay',  color: '#2563eb', selClass: 'sel-rzp' },
+  eb:  { name: 'Easebuzz',  color: '#f97316', selClass: 'sel-eb'  }
+};
+
 // ── STATE (private to this IIFE &mdash; no global pollution) ───────
 var fd       = {};
 var selGW    = '';
@@ -101,7 +114,25 @@ onReady(function() {
       });
     });
   }
-});
+}
+
+  // Handle Cashfree return
+  if (gw === 'cf' && payment === 'success') {
+    saveToSheet({
+      studentName: name, gateway: 'Cashfree',
+      status: 'Paid', paymentId: txnid,
+      finalAmount: Number(amount) || CFG.baseAmount,
+      program: CFG.program
+    });
+  }
+  if (gw === 'cf' && (payment === 'failed' || payment === 'cancelled')) {
+    saveToSheet({
+      studentName: name, gateway: 'Cashfree',
+      status: 'Cancelled', paymentId: txnid,
+      finalAmount: Number(amount) || CFG.baseAmount,
+      program: CFG.program
+    });
+  });
 
 // ── HELPERS ──────────────────────────────────────────────────
 function el(id)  { return document.getElementById(id); }
@@ -184,19 +215,18 @@ function setStep(n) {
 // ── GATEWAY SELECT ───────────────────────────────────────────
 function selectGW(gw) {
   selGW = gw;
-  el('gwRzp').className = 'gw-btn' + (gw==='rzp' ? ' sel-rzp' : '');
-  if (el('gwEb')) el('gwEb').className = 'gw-btn' + (gw==='eb' ? ' sel-eb' : '');
+  // Update all gateway buttons based on GATEWAY_SEQUENCE
+  GATEWAY_SEQUENCE.forEach(function(g) {
+    var btn = el('gw' + g.charAt(0).toUpperCase() + g.slice(1));
+    if (btn) btn.className = 'gw-btn' + (gw === g ? ' ' + GATEWAY_LABELS[g].selClass : '');
+  });
+  var info = GATEWAY_LABELS[gw] || { name: gw, color: '#2563eb' };
   var btn = el('payBtn');
-  btn.disabled = false;
-  if (gw === 'rzp') {
-    btn.className   = 'btn-next btn-rzp-pay';
-    btn.textContent = 'Pay Rs.' + fmt(finalAmt) + ' via Razorpay';
-    el('gwLabel').textContent = 'Razorpay';
-  } else if (gw === 'eb') {
-    btn.className   = 'btn-next btn-eb-pay';
-    btn.textContent = 'Pay Rs.' + fmt(finalAmt) + ' via Easebuzz';
-    el('gwLabel').textContent = 'Easebuzz';
-  }
+  btn.disabled  = false;
+  btn.className = 'btn-next';
+  btn.style.background = info.color;
+  btn.textContent = 'Pay Rs.' + fmt(finalAmt) + ' via ' + info.name;
+  el('gwLabel').textContent = info.name;
 }
 
 // ── DISCOUNT ─────────────────────────────────────────────────
@@ -239,7 +269,9 @@ async function applyDiscount() {
 // ── PAYMENT ROUTER ───────────────────────────────────────────
 function startPayment() {
   if (!selGW) { showToast('Please select a payment method.', 'err'); return; }
-  if (selGW === 'rzp') startRazorpay(); else startEasebuzz();
+  if (selGW === 'rzp') startRazorpay();
+  else if (selGW === 'cf') startCashfree();
+  else startEasebuzz();
 }
 
 // ── RAZORPAY ─────────────────────────────────────────────────
@@ -293,6 +325,82 @@ async function startRazorpay() {
   }
 }
 
+
+
+// ── CASHFREE ─────────────────────────────────────────────────────
+function loadCashfree() {
+  return new Promise(function(resolve) {
+    if (window.Cashfree) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+    s.onload = resolve; s.onerror = resolve;
+    document.head.appendChild(s);
+  });
+}
+
+async function startCashfree() {
+  el('payBtn').disabled = true;
+  showLoader('Preparing Cashfree payment&#8230;');
+  try {
+    var amt   = finalAmt.toFixed(2);
+    var txnid = 'ATG' + Date.now();
+
+    // Save initiated row to sheet
+    await saveToSheet({
+      studentName: fd.studentName, parentName: fd.parentName,
+      contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
+      schoolName: fd.schoolName, city: fd.city,
+      classGrade: fd.classGrade, gender: fd.gender,
+      gateway: 'Cashfree', status: 'Initiated',
+      baseAmount: CFG.baseAmount, discountCode: discCode,
+      discountAmt: discAmt, finalAmount: finalAmt,
+      paymentId: txnid, program: CFG.program
+    });
+
+    // Get payment_session_id from Apps Script (server-to-server)
+    var params = '?action=cfinit'
+      + '&txnid='     + encodeURIComponent(txnid)
+      + '&amount='    + encodeURIComponent(amt)
+      + '&firstname=' + encodeURIComponent(fd.studentName  || '')
+      + '&email='     + encodeURIComponent(fd.contactEmail || '')
+      + '&phone='     + encodeURIComponent(fd.contactPhone || '')
+      + '&_t='        + Date.now();
+
+    var resp   = await fetch(CFG.sheetsURL + params);
+    var result = await resp.json();
+
+    if (!result.success || !result.payment_session_id) {
+      hideLoader();
+      el('payBtn').disabled = false;
+      showToast('Cashfree error: ' + (result.error || 'Could not initiate payment'), 'err');
+      return;
+    }
+
+    // Load Cashfree SDK and open payment
+    await loadCashfree();
+    hideLoader();
+
+    var cashfree = window.Cashfree({ mode: 'production' });
+    cashfree.checkout({
+      paymentSessionId: result.payment_session_id,
+      returnUrl: CFG.sheetsURL.replace('/exec', '') + '?dummy=1',
+      redirectTarget: '_top'
+    }).then(function(res) {
+      if (res && res.error) {
+        el('payBtn').disabled = false;
+        showToast('Payment failed: ' + res.error.message, 'err');
+      }
+    }).catch(function(e) {
+      el('payBtn').disabled = false;
+      showToast('Cashfree error: ' + e.message, 'err');
+    });
+
+  } catch(e) {
+    hideLoader();
+    el('payBtn').disabled = false;
+    showToast('Cashfree error: ' + e.message, 'err');
+  }
+}
 
 // ── EASEBUZZ ─────────────────────────────────────────────────
 async function startEasebuzz() {
