@@ -524,20 +524,22 @@ function fillSelect(id, opts, placeholder) {
     opts.map(o => '<option' + (o===cur?' selected':'') + '>' + esc(o) + '</option>').join('');
 }
 
+function toNum(v) {
+  if (v === null || v === undefined || v === '') return 0;
+  if (typeof v === 'number' && !isNaN(v) && isFinite(v)) return v;
+  if (v instanceof Date) return 0;
+  var s = String(v).replace(/[^0-9.]/g, '');
+  var n = parseFloat(s);
+  return (isNaN(n) || !isFinite(n)) ? 0 : n;
+}
+
 function renderStats() {
   const paid = allRows.filter(r => r.status === 'Paid');
-  // Debug: log finalAmount values to see what's coming from sheet
-  if (paid.length > 0) console.log('[DEBUG] val=' + paid[0].finalAmount + ' type=' + typeof paid[0].finalAmount);
-  const rev  = paid.reduce((s,r) => {
-    var raw = r.finalAmount;
-    // Handle Date objects (Sheets sometimes converts numbers to dates)
-    if (raw instanceof Date) raw = raw.getTime ? 0 : 0;
-    var v = parseFloat(String(raw).replace(/,/g,'').replace(/[^0-9.]/g,''));
-    return s + (isNaN(v) ? 0 : v);
-  }, 0);
+  var rev = 0;
+  paid.forEach(function(r) { rev += toNum(r.finalAmount); });
   document.getElementById('sTotal').textContent = allRows.length;
   document.getElementById('sPaid').textContent  = paid.length;
-  document.getElementById('sRev').textContent   = '&#8377;' + fmt(rev);
+  document.getElementById('sRev').textContent   = 'Rs.' + fmt(rev);
   document.getElementById('sPend').textContent  = allRows.filter(r => r.status==='Pending'||r.status==='Initiated').length;
   document.getElementById('sFail').textContent  = allRows.filter(r => r.status==='Failed').length;
   document.getElementById('sDisc').textContent  = allRows.filter(r => r.discountCode).length;
@@ -752,7 +754,7 @@ function renderDiscountChart() {
 function renderRevGWChart() {
   destroyChart('revgw');
   const rev = {};
-  allRows.filter(r=>r.status==='Paid').forEach(r => { const g=r.gateway||'Unknown'; var v=parseFloat(String(r.finalAmount).replace(/,/g,'')); rev[g]=(rev[g]||0)+(isNaN(v)?0:v); });
+  allRows.filter(r=>r.status==='Paid').forEach(r => { const g=r.gateway||'Unknown'; rev[g]=(rev[g]||0)+toNum(r.finalAmount); });
   const ctx = document.getElementById('chartRevGW').getContext('2d');
   charts.revgw = new Chart(ctx, {
     type:'bar',
@@ -791,7 +793,7 @@ function renderInsights() {
   const rankEmoji = ['🥇','🥈','🥉','4️⃣','5️⃣'];
 
   const cityRev = {};
-  allRows.filter(r=>r.status==='Paid').forEach(r => { const c=r.city||'Unknown'; var v=parseFloat(String(r.finalAmount).replace(/,/g,'')); cityRev[c]=(cityRev[c]||0)+(isNaN(v)?0:v); });
+  allRows.filter(r=>r.status==='Paid').forEach(r => { const c=r.city||'Unknown'; cityRev[c]=(cityRev[c]||0)+toNum(r.finalAmount); });
   const topCities = Object.entries(cityRev).sort((a,b)=>b[1]-a[1]).slice(0,5);
   document.getElementById('topCityRev').innerHTML = topCities.map(([city,rev],i) =>
     '<div class="top-item"><div class="top-rank ' + (i===0?'gold':i===1?'silver':i===2?'bronze':'') + '">' + (rankEmoji[i]||i+1) + '</div>'
@@ -821,7 +823,7 @@ function renderInsights() {
     + '</div></div>';
 
   const withDisc  = allRows.filter(r=>r.discountCode&&r.status==='Paid');
-  const discSaved = withDisc.reduce((s,r)=>{var v=parseFloat(String(r.discountAmt).replace(/,/g,''));return s+(isNaN(v)?0:v);},0);
+  const discSaved = withDisc.reduce((s,r)=>s+toNum(r.discountAmt),0);
   const withoutDisc = allRows.filter(r=>!r.discountCode&&r.status==='Paid');
   document.getElementById('discountStats').innerHTML =
     '<div style="display:flex;flex-direction:column;gap:10px">'
@@ -905,8 +907,7 @@ function cleanTime(t) {
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function fmt(n) {
-  var num = typeof n === 'string' ? parseFloat(n.replace(/,/g,'')) : Number(n);
-  if (isNaN(num)) return '0';
+  var num = toNum(n);
   return num.toLocaleString('en-IN');
 }
 function showToast(msg,icon){const t=document.getElementById('toast');t.textContent=(icon||'')+' '+msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
