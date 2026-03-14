@@ -441,12 +441,13 @@ async function startCashfree() {
       + encodeURIComponent(fd.studentName || '') + '&amount='
       + encodeURIComponent(amt);
     var cashfree = window.Cashfree({ mode: 'production' });
-    await cashfree.checkout({
+    // returnUrl is set in the order (Apps Script) - do NOT pass it here
+    // Using '_self' as per Cashfree docs for redirect checkout
+    cashfree.checkout({
       paymentSessionId: result.payment_session_id,
-      redirectTarget:   '_top',
-      returnUrl:        cfReturnUrl
+      redirectTarget:   '_self'
     });
-    el('payBtn').disabled = false;
+    // No await - page will redirect, code below won't run
 
   } catch(e) {
     hideLoader();
