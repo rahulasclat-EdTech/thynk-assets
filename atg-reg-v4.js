@@ -44,7 +44,7 @@ function loadRazorpay() {
 // ── CONFIG ───────────────────────────────────────────────────
 var CFG = {
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbwNh-CKCp2Gb4v9Vrwdiukt0iibe7WGpo07qJLPiejRDtESxCHKFyEhAxYA4ZDoZGqnNQ/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbxUd1SDLxKH9IbfAU0nMhLeYB6OebWSB9bS2YVW3bye1Qfvzh7WTp-MEzC063loOsNVsw/exec',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
@@ -118,13 +118,15 @@ onReady(function() {
     });
   }
 
-  // Handle Cashfree return — show payment step again on cancel/fail
+  // Handle Cashfree return — Cashfree appends ?order_id=xxx automatically
+  // We detect our own ?cf=1 marker that we set in return_url
+  var cfFlag = params.get('cf');
   var cfHash = window.location.hash;
-  if (cfHash && cfHash.indexOf('#cf/') === 0) {
-    var hashParts = cfHash.replace('#cf/', '').split('/');
-    var cfTxnid  = decodeURIComponent(hashParts[0] || '');
-    var cfName   = decodeURIComponent(hashParts[1] || '');
-    var cfAmount = parseFloat(decodeURIComponent(hashParts[2] || CFG.baseAmount)) || CFG.baseAmount;
+  if (cfFlag === '1' || (cfHash && cfHash.indexOf('#cf/') === 0)) {
+    // Get values from query params (new) or hash (legacy)
+    var cfTxnid  = params.get('txnid') || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[0])||'') : '');
+    var cfName   = params.get('name')  || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[1])||'') : '');
+    var cfAmount = parseFloat(params.get('amount') || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[2])||'0') : '0')) || CFG.baseAmount;
     // Clear hash from URL silently
     window.history.replaceState({}, '', window.location.pathname);
     if (cfTxnid) {
@@ -433,10 +435,10 @@ async function startCashfree() {
     } catch(se) {}
 
     // Cashfree SDK v3 - open payment page
-    // returnUrl set HERE overrides Apps Script order URL - guarantees correct redirect
-    var cfReturnUrl = 'https://thynksuccess.com/registration/#cf/'
-      + encodeURIComponent(txnid) + '/'
-      + encodeURIComponent(fd.studentName || '') + '/'
+    // Simple return URL - Cashfree appends order_id automatically
+    var cfReturnUrl = 'https://thynksuccess.com/registration/?cf=1&txnid='
+      + encodeURIComponent(txnid) + '&name='
+      + encodeURIComponent(fd.studentName || '') + '&amount='
       + encodeURIComponent(amt);
     var cashfree = window.Cashfree({ mode: 'production' });
     await cashfree.checkout({
