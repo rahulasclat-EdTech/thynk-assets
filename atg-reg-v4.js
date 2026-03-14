@@ -44,7 +44,7 @@ function loadRazorpay() {
 // ── CONFIG ───────────────────────────────────────────────────
 var CFG = {
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbxSlUG1O7eqeg3lAab3d0P9iwsGB0HymYoqkuARFg17n9L5kAj7paBSXEsm5wfMPR0y6w/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbwNh-CKCp2Gb4v9Vrwdiukt0iibe7WGpo07qJLPiejRDtESxCHKFyEhAxYA4ZDoZGqnNQ/exec',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
@@ -118,46 +118,48 @@ onReady(function() {
     });
   }
 
-  // Handle Cashfree return — verify order status via Apps Script
-  if (gw === 'cf' && txnid) {
-    showLoader('Verifying payment\u2026');
-    fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(txnid) + '&_t=' + Date.now())
-      .then(function(r) { return r.json(); })
-      .then(function(res) {
-        hideLoader();
-        window.history.replaceState({}, '', window.location.pathname);
-        if (res.status === 'PAID') {
-          // Payment successful - save and show success screen
-          var d = {
-            studentName: name, gateway: 'Cashfree',
-            status: 'Paid', paymentId: res.cf_payment_id || txnid,
-            finalAmount: Number(amount) || CFG.baseAmount,
-            program: CFG.program
-          };
-          saveToSheet(d);
-          showSuccessScreen({
-            studentName: name, gateway: 'Cashfree',
-            paymentId: res.cf_payment_id || txnid,
-            finalAmount: Number(amount) || CFG.baseAmount,
-            discountCode: '', discountAmt: 0
-          });
-        } else {
-          // Payment failed/cancelled - go back to payment step
-          saveToSheet({
-            studentName: name, gateway: 'Cashfree',
-            status: res.status === 'ACTIVE' ? 'Pending' : 'Cancelled',
-            paymentId: txnid,
-            finalAmount: Number(amount) || CFG.baseAmount,
-            program: CFG.program
-          });
-          showToast('Payment ' + (res.status || 'cancelled').toLowerCase() + '. Please try again.', 'err');
-        }
-      })
-      .catch(function() {
-        hideLoader();
-        window.history.replaceState({}, '', window.location.pathname);
-        showToast('Could not verify payment. Please contact support.', 'err');
-      });
+  // Handle Cashfree return — hash-based (#cf/txnid/name/amount)
+  var cfHash = window.location.hash;
+  if (cfHash && cfHash.indexOf('#cf/') === 0) {
+    var hashParts = cfHash.replace('#cf/', '').split('/');
+    var cfTxnid  = decodeURIComponent(hashParts[0] || '');
+    var cfName   = decodeURIComponent(hashParts[1] || '');
+    var cfAmount = decodeURIComponent(hashParts[2] || CFG.baseAmount);
+    // Clear hash from URL
+    window.history.replaceState({}, '', window.location.pathname);
+    if (cfTxnid) {
+      showLoader('Verifying Cashfree payment…');
+      fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(cfTxnid) + '&_t=' + Date.now())
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+          hideLoader();
+          if (res.status === 'PAID') {
+            saveToSheet({
+              studentName: cfName, gateway: 'Cashfree', status: 'Paid',
+              paymentId: res.cf_payment_id || cfTxnid,
+              finalAmount: Number(cfAmount) || CFG.baseAmount, program: CFG.program
+            });
+            showSuccessScreen({
+              studentName: cfName, gateway: 'Cashfree',
+              paymentId: res.cf_payment_id || cfTxnid,
+              finalAmount: Number(cfAmount) || CFG.baseAmount,
+              classGrade: '', schoolName: '', city: '',
+              discountCode: '', discountAmt: 0
+            });
+          } else {
+            saveToSheet({
+              studentName: cfName, gateway: 'Cashfree',
+              status: 'Cancelled', paymentId: cfTxnid,
+              finalAmount: Number(cfAmount) || CFG.baseAmount, program: CFG.program
+            });
+            showToast('Payment ' + (res.status||'cancelled').toLowerCase() + '. Please select a gateway to retry.', 'err');
+          }
+        })
+        .catch(function() {
+          hideLoader();
+          showToast('Payment verification failed. Please contact support.', 'err');
+        });
+    }
   }
 });
 
