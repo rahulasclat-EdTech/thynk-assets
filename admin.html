@@ -526,7 +526,15 @@ function fillSelect(id, opts, placeholder) {
 
 function renderStats() {
   const paid = allRows.filter(r => r.status === 'Paid');
-  const rev  = paid.reduce((s,r) => { var v = parseFloat(String(r.finalAmount).replace(/,/g,'')); return s + (isNaN(v)?0:v); }, 0);
+  // Debug: log finalAmount values to see what's coming from sheet
+  if (paid.length > 0) console.log('[DEBUG] Sample finalAmount:', paid[0].finalAmount, typeof paid[0].finalAmount);
+  const rev  = paid.reduce((s,r) => {
+    var raw = r.finalAmount;
+    // Handle Date objects (Sheets sometimes converts numbers to dates)
+    if (raw instanceof Date) raw = raw.getTime ? 0 : 0;
+    var v = parseFloat(String(raw).replace(/,/g,'').replace(/[^0-9.]/g,''));
+    return s + (isNaN(v) ? 0 : v);
+  }, 0);
   document.getElementById('sTotal').textContent = allRows.length;
   document.getElementById('sPaid').textContent  = paid.length;
   document.getElementById('sRev').textContent   = '&#8377;' + fmt(rev);
