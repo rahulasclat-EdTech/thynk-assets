@@ -86,7 +86,7 @@ function onReady(fn) {
 onReady(function() {
   // ── HANDLE EASEBUZZ RETURN (after payment redirect back) ───
   var params  = new URLSearchParams(window.location.search);
-  var payment = params.get('payment');
+  var payment = (params.get('payment') || '').toLowerCase(); // normalize UPPERCASE from Cashfree
   var gw      = params.get('gw');
   var txnid   = params.get('txnid') || '';
   var name    = params.get('name')  || '';
@@ -116,21 +116,27 @@ onReady(function() {
   }
 
   // Handle Cashfree return
-  if (gw === 'cf' && payment === 'success') {
-    saveToSheet({
-      studentName: name, gateway: 'Cashfree',
-      status: 'Paid', paymentId: txnid,
-      finalAmount: Number(amount) || CFG.baseAmount,
-      program: CFG.program
-    });
-  }
-  if (gw === 'cf' && (payment === 'failed' || payment === 'cancelled')) {
-    saveToSheet({
-      studentName: name, gateway: 'Cashfree',
-      status: 'Cancelled', paymentId: txnid,
-      finalAmount: Number(amount) || CFG.baseAmount,
-      program: CFG.program
-    });
+  if (gw === 'cf') {
+    if (payment === 'success') {
+      saveToSheet({
+        studentName: name, gateway: 'Cashfree',
+        status: 'Paid', paymentId: txnid,
+        finalAmount: Number(amount) || CFG.baseAmount,
+        program: CFG.program
+      });
+      // Clean URL so page loads fresh without params
+      window.history.replaceState({}, '', window.location.pathname);
+    } else if (payment === 'failed' || payment === 'cancelled' || payment === 'pending') {
+      saveToSheet({
+        studentName: name, gateway: 'Cashfree',
+        status: 'Cancelled', paymentId: txnid,
+        finalAmount: Number(amount) || CFG.baseAmount,
+        program: CFG.program
+      });
+      // Clean URL so user sees registration form fresh
+      window.history.replaceState({}, '', window.location.pathname);
+      showToast('Payment ' + payment + '. Please try again or choose another gateway.', 'err');
+    }
   }
 });
 
