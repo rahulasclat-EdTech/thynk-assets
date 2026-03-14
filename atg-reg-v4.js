@@ -44,7 +44,7 @@ function loadRazorpay() {
 // ── CONFIG ───────────────────────────────────────────────────
 var CFG = {
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbxkwmdMWfki4xHKLPty-l1rfiPoMGyUaXGXjcPH5rNvMiBDV0f1M8Qr0WIuAvMzfxAJ7g/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbxSlUG1O7eqeg3lAab3d0P9iwsGB0HymYoqkuARFg17n9L5kAj7paBSXEsm5wfMPR0y6w/exec',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
@@ -56,7 +56,10 @@ var CFG = {
 // Remove a gateway from the list to hide it completely.
 // Options: 'cf' (Cashfree), 'rzp' (Razorpay), 'eb' (Easebuzz)
 // ─────────────────────────────────────────────────────────────────
-var GATEWAY_SEQUENCE = ['cf', 'rzp', 'eb'];
+// ── GATEWAY SEQUENCE ─────────────────────────────────────────────
+// Easebuzz ('eb') is hidden until account is activated by Easebuzz support
+// To re-enable: add 'eb' back → ['cf', 'rzp', 'eb']
+var GATEWAY_SEQUENCE = ['cf', 'rzp']; // 'eb' disabled - WC0E03 account issue
 
 var GATEWAY_LABELS = {
   cf:  { name: 'Cashfree',  color: '#2563eb', selClass: 'sel-cf'  },
@@ -115,28 +118,46 @@ onReady(function() {
     });
   }
 
-  // Handle Cashfree return
-  if (gw === 'cf') {
-    if (payment === 'success') {
-      saveToSheet({
-        studentName: name, gateway: 'Cashfree',
-        status: 'Paid', paymentId: txnid,
-        finalAmount: Number(amount) || CFG.baseAmount,
-        program: CFG.program
+  // Handle Cashfree return — verify order status via Apps Script
+  if (gw === 'cf' && txnid) {
+    showLoader('Verifying payment\u2026');
+    fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(txnid) + '&_t=' + Date.now())
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
+        hideLoader();
+        window.history.replaceState({}, '', window.location.pathname);
+        if (res.status === 'PAID') {
+          // Payment successful - save and show success screen
+          var d = {
+            studentName: name, gateway: 'Cashfree',
+            status: 'Paid', paymentId: res.cf_payment_id || txnid,
+            finalAmount: Number(amount) || CFG.baseAmount,
+            program: CFG.program
+          };
+          saveToSheet(d);
+          showSuccessScreen({
+            studentName: name, gateway: 'Cashfree',
+            paymentId: res.cf_payment_id || txnid,
+            finalAmount: Number(amount) || CFG.baseAmount,
+            discountCode: '', discountAmt: 0
+          });
+        } else {
+          // Payment failed/cancelled - go back to payment step
+          saveToSheet({
+            studentName: name, gateway: 'Cashfree',
+            status: res.status === 'ACTIVE' ? 'Pending' : 'Cancelled',
+            paymentId: txnid,
+            finalAmount: Number(amount) || CFG.baseAmount,
+            program: CFG.program
+          });
+          showToast('Payment ' + (res.status || 'cancelled').toLowerCase() + '. Please try again.', 'err');
+        }
+      })
+      .catch(function() {
+        hideLoader();
+        window.history.replaceState({}, '', window.location.pathname);
+        showToast('Could not verify payment. Please contact support.', 'err');
       });
-      // Clean URL so page loads fresh without params
-      window.history.replaceState({}, '', window.location.pathname);
-    } else if (payment === 'failed' || payment === 'cancelled' || payment === 'pending') {
-      saveToSheet({
-        studentName: name, gateway: 'Cashfree',
-        status: 'Cancelled', paymentId: txnid,
-        finalAmount: Number(amount) || CFG.baseAmount,
-        program: CFG.program
-      });
-      // Clean URL so user sees registration form fresh
-      window.history.replaceState({}, '', window.location.pathname);
-      showToast('Payment ' + payment + '. Please try again or choose another gateway.', 'err');
-    }
   }
 });
 
