@@ -539,7 +539,7 @@ function renderStats() {
   paid.forEach(function(r) { rev += toNum(r.finalAmount); });
   document.getElementById('sTotal').textContent = allRows.length;
   document.getElementById('sPaid').textContent  = paid.length;
-  document.getElementById('sRev').textContent   = 'Rs.' + fmt(rev);
+  document.getElementById('sRev').innerHTML      = '&#8377;' + fmt(rev);
   document.getElementById('sPend').textContent  = allRows.filter(r => r.status==='Pending'||r.status==='Initiated').length;
   document.getElementById('sFail').textContent  = allRows.filter(r => r.status==='Failed').length;
   document.getElementById('sDisc').textContent  = allRows.filter(r => r.discountCode).length;
