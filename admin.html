@@ -444,7 +444,7 @@ td.wrap{white-space:normal;max-width:160px}
 
 <script>
 const ADMIN_PASS = 'Thynk@2026';
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxkwmdMWfki4xHKLPty-l1rfiPoMGyUaXGXjcPH5rNvMiBDV0f1M8Qr0WIuAvMzfxAJ7g/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxSlUG1O7eqeg3lAab3d0P9iwsGB0HymYoqkuARFg17n9L5kAj7paBSXEsm5wfMPR0y6w/exec';
 
 let allRows = [], charts = {};
 
@@ -526,7 +526,7 @@ function fillSelect(id, opts, placeholder) {
 
 function renderStats() {
   const paid = allRows.filter(r => r.status === 'Paid');
-  const rev  = paid.reduce((s,r) => s + (Number(r.finalAmount)||0), 0);
+  const rev  = paid.reduce((s,r) => { var v = parseFloat(String(r.finalAmount).replace(/,/g,'')); return s + (isNaN(v)?0:v); }, 0);
   document.getElementById('sTotal').textContent = allRows.length;
   document.getElementById('sPaid').textContent  = paid.length;
   document.getElementById('sRev').textContent   = '&#8377;' + fmt(rev);
@@ -744,7 +744,7 @@ function renderDiscountChart() {
 function renderRevGWChart() {
   destroyChart('revgw');
   const rev = {};
-  allRows.filter(r=>r.status==='Paid').forEach(r => { const g=r.gateway||'Unknown'; rev[g]=(rev[g]||0)+(Number(r.finalAmount)||0); });
+  allRows.filter(r=>r.status==='Paid').forEach(r => { const g=r.gateway||'Unknown'; var v=parseFloat(String(r.finalAmount).replace(/,/g,'')); rev[g]=(rev[g]||0)+(isNaN(v)?0:v); });
   const ctx = document.getElementById('chartRevGW').getContext('2d');
   charts.revgw = new Chart(ctx, {
     type:'bar',
@@ -783,7 +783,7 @@ function renderInsights() {
   const rankEmoji = ['🥇','🥈','🥉','4️⃣','5️⃣'];
 
   const cityRev = {};
-  allRows.filter(r=>r.status==='Paid').forEach(r => { const c=r.city||'Unknown'; cityRev[c]=(cityRev[c]||0)+(Number(r.finalAmount)||0); });
+  allRows.filter(r=>r.status==='Paid').forEach(r => { const c=r.city||'Unknown'; var v=parseFloat(String(r.finalAmount).replace(/,/g,'')); cityRev[c]=(cityRev[c]||0)+(isNaN(v)?0:v); });
   const topCities = Object.entries(cityRev).sort((a,b)=>b[1]-a[1]).slice(0,5);
   document.getElementById('topCityRev').innerHTML = topCities.map(([city,rev],i) =>
     '<div class="top-item"><div class="top-rank ' + (i===0?'gold':i===1?'silver':i===2?'bronze':'') + '">' + (rankEmoji[i]||i+1) + '</div>'
@@ -813,7 +813,7 @@ function renderInsights() {
     + '</div></div>';
 
   const withDisc  = allRows.filter(r=>r.discountCode&&r.status==='Paid');
-  const discSaved = withDisc.reduce((s,r)=>s+(Number(r.discountAmt)||0),0);
+  const discSaved = withDisc.reduce((s,r)=>{var v=parseFloat(String(r.discountAmt).replace(/,/g,''));return s+(isNaN(v)?0:v);},0);
   const withoutDisc = allRows.filter(r=>!r.discountCode&&r.status==='Paid');
   document.getElementById('discountStats').innerHTML =
     '<div style="display:flex;flex-direction:column;gap:10px">'
@@ -896,7 +896,11 @@ function cleanTime(t) {
   return t;
 }
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
-function fmt(n){return Number(n).toLocaleString('en-IN')}
+function fmt(n) {
+  var num = typeof n === 'string' ? parseFloat(n.replace(/,/g,'')) : Number(n);
+  if (isNaN(num)) return '0';
+  return num.toLocaleString('en-IN');
+}
 function showToast(msg,icon){const t=document.getElementById('toast');t.textContent=(icon||'')+' '+msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3000)}
 </script>
 </body>
