@@ -44,7 +44,7 @@ function loadRazorpay() {
 // ── CONFIG ───────────────────────────────────────────────────
 var CFG = {
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbws3wYyJptTDscu3s8X9VBCiW2fmcLkJmvmVNXm1n7YQb6WzQIaJlghNIDqt_p4PJUDxg/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbxkwmdMWfki4xHKLPty-l1rfiPoMGyUaXGXjcPH5rNvMiBDV0f1M8Qr0WIuAvMzfxAJ7g/exec',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
@@ -380,20 +380,15 @@ async function startCashfree() {
     await loadCashfree();
     hideLoader();
 
+    // Cashfree SDK v3 - open payment page
+    // On success/failure, Cashfree redirects to returnUrl set in Apps Script order
     var cashfree = window.Cashfree({ mode: 'production' });
-    cashfree.checkout({
+    var cfResult = await cashfree.checkout({
       paymentSessionId: result.payment_session_id,
-      returnUrl: CFG.sheetsURL.replace('/exec', '') + '?dummy=1',
       redirectTarget: '_top'
-    }).then(function(res) {
-      if (res && res.error) {
-        el('payBtn').disabled = false;
-        showToast('Payment failed: ' + res.error.message, 'err');
-      }
-    }).catch(function(e) {
-      el('payBtn').disabled = false;
-      showToast('Cashfree error: ' + e.message, 'err');
     });
+    // If we reach here without redirect, re-enable button
+    el('payBtn').disabled = false;
 
   } catch(e) {
     hideLoader();
