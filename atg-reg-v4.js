@@ -118,72 +118,81 @@ onReady(function() {
     });
   }
 
-  // Handle Cashfree return — hash-based (#cf/txnid/name/amount)
+  // Handle Cashfree return — show payment step again on cancel/fail
   var cfHash = window.location.hash;
   if (cfHash && cfHash.indexOf('#cf/') === 0) {
     var hashParts = cfHash.replace('#cf/', '').split('/');
     var cfTxnid  = decodeURIComponent(hashParts[0] || '');
     var cfName   = decodeURIComponent(hashParts[1] || '');
-    var cfAmount = decodeURIComponent(hashParts[2] || CFG.baseAmount);
-    // Clear hash from URL
+    var cfAmount = parseFloat(decodeURIComponent(hashParts[2] || CFG.baseAmount)) || CFG.baseAmount;
+    // Clear hash from URL silently
     window.history.replaceState({}, '', window.location.pathname);
     if (cfTxnid) {
-      showLoader('Verifying Cashfree payment…');
+      // Restore fd so payment step works
+      fd = {
+        studentName:  cfName,
+        parentName:   decodeURIComponent(hashParts[3] || ''),
+        contactPhone: decodeURIComponent(hashParts[4] || ''),
+        contactEmail: decodeURIComponent(hashParts[5] || ''),
+        schoolName:   decodeURIComponent(hashParts[6] || ''),
+        city:         decodeURIComponent(hashParts[7] || ''),
+        classGrade:   decodeURIComponent(hashParts[8] || ''),
+        gender:       decodeURIComponent(hashParts[9] || ''),
+        program:      CFG.program,
+        baseAmount:   CFG.baseAmount
+      };
+      finalAmt = cfAmount;
+      // Show loader while verifying
+      showLoader('Verifying payment…');
       fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(cfTxnid) + '&_t=' + Date.now())
         .then(function(r) { return r.json(); })
         .then(function(res) {
           hideLoader();
           if (res.status === 'PAID') {
+            // Paid — show success screen
             saveToSheet({
               studentName: cfName, gateway: 'Cashfree', status: 'Paid',
               paymentId: res.cf_payment_id || cfTxnid,
-              finalAmount: Number(cfAmount) || CFG.baseAmount, program: CFG.program
+              finalAmount: cfAmount, program: CFG.program
             });
             showSuccessScreen({
               studentName: cfName, gateway: 'Cashfree',
               paymentId: res.cf_payment_id || cfTxnid,
-              finalAmount: Number(cfAmount) || CFG.baseAmount,
-              classGrade: '', schoolName: '', city: '',
+              finalAmount: cfAmount, classGrade: fd.classGrade,
+              schoolName: fd.schoolName, city: fd.city,
               discountCode: '', discountAmt: 0
             });
           } else {
+            // Cancelled/failed — update sheet and GO BACK TO PAYMENT STEP
             saveToSheet({
-              studentName: cfName, gateway: 'Cashfree',
-              status: 'Cancelled', paymentId: cfTxnid,
-              finalAmount: Number(cfAmount) || CFG.baseAmount, program: CFG.program
+              studentName: cfName, gateway: 'Cashfree', status: 'Cancelled',
+              paymentId: cfTxnid, finalAmount: cfAmount, program: CFG.program
             });
-            showToast('Payment ' + (res.status||'cancelled').toLowerCase() + '. Please select a gateway to retry.', 'err');
+            // Show review box with saved data
+            el('reviewBox').innerHTML =
+              '<div class="orow"><span class="olbl">Student</span><span class="oval">' + esc(cfName) + '</span></div>';
+            // Go to Step 2 — payment gateway selection
+            show('step1', false);
+            show('step2', true);
+            setStep(2);
+            // Update amounts
+            el('totalAmt').textContent = 'Rs.' + fmt(cfAmount);
+            showToast('Payment cancelled. Please select a gateway and try again.', 'err');
           }
         })
         .catch(function() {
           hideLoader();
-          showToast('Payment verification failed. Please contact support.', 'err');
+          // On error — still go to Step 2 so user can retry
+          show('step1', false);
+          show('step2', true);
+          setStep(2);
+          showToast('Payment verification failed. Please try again.', 'err');
         });
     }
   }
-});
 
-// ── HELPERS ──────────────────────────────────────────────────
-function el(id)  { return document.getElementById(id); }
-function g(id)   { return el(id).value.trim(); }
-function fmt(n)  { return Number(n).toLocaleString('en-IN'); }
-function esc(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function row(lbl, val, last) {
-  return '<div class="sdrow"' + (last ? ' style="border-bottom:none"' : '') + '>'
-       + '<span class="sdlbl">' + lbl + '</span>'
-       + '<span class="sdval">' + val + '</span></div>';
-}
-function showLoader(t) { el('ltxt').textContent = t || 'Please wait&#8230;'; el('loader').classList.add('show'); }
-function hideLoader()  { el('loader').classList.remove('show'); }
-function showToast(msg, type) {
-  var t = el('toast');
-  t.textContent = (type==='ok' ? '&#9989; ' : type==='err' ? '⚠️ ' : 'ℹ️ ') + msg;
-  t.className   = 'toast show' + (type==='ok' ? ' tok' : type==='err' ? ' terr' : '');
-  clearTimeout(_tt);
-  _tt = setTimeout(function(){ t.classList.remove('show'); }, 4500);
-}
+}); // end onReady
 
-// ── VALIDATION ───────────────────────────────────────────────
 var rules = {
   studentName:  function(v){ return v.trim().length >= 2; },
   classGrade:   function(v){ return v !== ''; },
@@ -393,6 +402,11 @@ async function startCashfree() {
       + '&firstname=' + encodeURIComponent(fd.studentName  || '')
       + '&email='     + encodeURIComponent(fd.contactEmail || '')
       + '&phone='     + encodeURIComponent(fd.contactPhone || '')
+      + '&udf1='      + encodeURIComponent(fd.parentName   || '')
+      + '&udf2='      + encodeURIComponent(fd.schoolName   || '')
+      + '&udf3='      + encodeURIComponent(fd.city         || '')
+      + '&udf4='      + encodeURIComponent(fd.classGrade   || '')
+      + '&udf5='      + encodeURIComponent(fd.gender       || '')
       + '&_t='        + Date.now();
 
     var resp   = await fetch(CFG.sheetsURL + params);
@@ -409,14 +423,27 @@ async function startCashfree() {
     await loadCashfree();
     hideLoader();
 
+    // Save form data to sessionStorage before redirect
+    // So we can restore Step 2 when page reloads after payment
+    try {
+      sessionStorage.setItem('atg_fd', JSON.stringify(fd));
+      sessionStorage.setItem('atg_finalAmt', String(finalAmt));
+      sessionStorage.setItem('atg_discCode', discCode || '');
+      sessionStorage.setItem('atg_discAmt', String(discAmt || 0));
+    } catch(se) {}
+
     // Cashfree SDK v3 - open payment page
-    // On success/failure, Cashfree redirects to returnUrl set in Apps Script order
+    // returnUrl set HERE overrides Apps Script order URL - guarantees correct redirect
+    var cfReturnUrl = 'https://thynksuccess.com/registration/#cf/'
+      + encodeURIComponent(txnid) + '/'
+      + encodeURIComponent(fd.studentName || '') + '/'
+      + encodeURIComponent(amt);
     var cashfree = window.Cashfree({ mode: 'production' });
-    var cfResult = await cashfree.checkout({
+    await cashfree.checkout({
       paymentSessionId: result.payment_session_id,
-      redirectTarget: '_top'
+      redirectTarget:   '_top',
+      returnUrl:        cfReturnUrl
     });
-    // If we reach here without redirect, re-enable button
     el('payBtn').disabled = false;
 
   } catch(e) {
