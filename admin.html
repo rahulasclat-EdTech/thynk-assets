@@ -453,6 +453,11 @@ function doLogin() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
     loadData();
+    // Auto-refresh every 10 minutes
+    setInterval(function() {
+      loadData();
+      showToast('Auto-refreshed', '🔄');
+    }, 10 * 60 * 1000);
   } else {
     document.getElementById('lerr').style.display = 'block';
     document.getElementById('pwdInput').value = '';
@@ -482,9 +487,9 @@ async function loadData() {
     const data = await res.json();
     allRows = (data.rows || []).filter(r => {
       if (!r.studentName) return false;
-      const n = r.studentName.toLowerCase().trim();
-      // Only exclude obvious test entries, not real students whose names contain 'test'
-      return n !== 'test' && n !== 'test student' && n !== 'teststudent';
+      // Only filter out entries where BOTH name is 'test' AND gateway is 'Test'
+      const isTest = r.studentName.toLowerCase().trim() === 'test' && r.gateway === 'Test';
+      return !isTest;
     });
     populateFilters();
     renderStats();
@@ -494,7 +499,8 @@ async function loadData() {
     renderGWChart();
     renderBreakdowns();
     const now = new Date();
-    document.getElementById('lastUpdated').textContent = 'Last updated ' + now.toLocaleTimeString('en-IN') + ' IST · ' + allRows.length + ' records';
+    var nextRefresh = new Date(Date.now() + 10*60*1000);
+    document.getElementById('lastUpdated').textContent = 'Last updated ' + now.toLocaleTimeString('en-IN') + ' IST · ' + allRows.length + ' records · Next refresh at ' + nextRefresh.toLocaleTimeString('en-IN');
     showToast('Loaded ' + allRows.length + ' records', '✅');
   } catch(e) {
     showToast('Load error: ' + e.message, '❌');
