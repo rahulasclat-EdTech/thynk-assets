@@ -114,7 +114,6 @@ onReady(function() {
       });
     });
   }
-}
 
   // Handle Cashfree return
   if (gw === 'cf' && payment === 'success') {
@@ -132,7 +131,8 @@ onReady(function() {
       finalAmount: Number(amount) || CFG.baseAmount,
       program: CFG.program
     });
-  });
+  }
+});
 
 // ── HELPERS ──────────────────────────────────────────────────
 function el(id)  { return document.getElementById(id); }
