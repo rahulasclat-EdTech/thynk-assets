@@ -1,216 +1,54 @@
-// ATG Registration v4 — Cashfree + Gateway Sequence — 2026-03-15
-// ========================================
-// EMBEDDING-SAFE IIFE &mdash; wraps ALL code so nothing leaks into the
-// parent page's global scope. Fixes 4 embedding-specific bugs:
-//
-// EMBED BUG 1: Global variables (fd, selGW, discCode, etc.) clash
-//   with variables on the parent page &#8594; wrong values, silent errors.
-//   FIX: everything is inside this IIFE, zero globals exposed.
-//
-// EMBED BUG 2: DOMContentLoaded fires BEFORE this script runs when
-//   embedded &mdash; the event is already past, listener never triggers,
-//   so Easebuzz return URL is never detected after payment.
-//   FIX: check readyState first; run immediately if already loaded.
-//
-// EMBED BUG 3: document.body.appendChild(form) + form.submit() for
-//   Easebuzz appends the hidden form to the PARENT page's <body>,
-//   which can be blocked by parent page's CSP or JS event listeners.
-//   FIX: use the wrapper div as the form target container instead.
-//
-// EMBED BUG 4: document.querySelectorAll('input, select') selects
-//   ALL inputs on the parent page too &mdash; adds error-clearing handlers
-//   to unrelated fields, and can cause JS errors if those fields
-//   don't have matching 'e-{id}' error divs.
-//   FIX: scope querySelector to the registration card only.
-//
-// SHEET BUG: saveToSheet used GET &#8594; cached by Google CDN &#8594; script
-//   never ran again after first hit &#8594; sheet stayed empty.
-//   AND: POST with application/json triggers CORS preflight &#8594;
-//   Apps Script ignores OPTIONS &#8594; browser blocks POST.
-//   FIX: POST with Content-Type: text/plain (no preflight, no cache).
-// ================================================================
-function loadRazorpay() {
-  return new Promise(function(resolve) {
-    if (window.Razorpay) { resolve(); return; }
-    var s = document.createElement('script');
-    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    s.onload = resolve; s.onerror = resolve;
-    document.head.appendChild(s);
-  });
-}
-(function() {
-'use strict';
+// ATGenius Registration v4 - Clean Rewrite
+// Cashfree + Razorpay | thynksuccess.com/registration/
 
-// ── CONFIG ───────────────────────────────────────────────────
 var CFG = {
-  razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
   sheetsURL:     'https://script.google.com/macros/s/AKfycbxTgJIE4XAqFhQ_SHd0TfBx_bYm4htRlWoWq3ENxSfmVtIFaaUw9YxMy3HCZpg94BpH-Q/exec',
+  razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
   redirectURL:   'https://thynksuccess.com'
 };
 
-// ── GATEWAY SEQUENCE ─────────────────────────────────────────────
-// Change the order below to reprioritize gateways.
-// Remove a gateway from the list to hide it completely.
-// Options: 'cf' (Cashfree), 'rzp' (Razorpay), 'eb' (Easebuzz)
-// ─────────────────────────────────────────────────────────────────
-// ── GATEWAY SEQUENCE ─────────────────────────────────────────────
-// Easebuzz ('eb') is hidden until account is activated by Easebuzz support
-// To re-enable: add 'eb' back → ['cf', 'rzp', 'eb']
-var GATEWAY_SEQUENCE = ['cf', 'rzp']; // 'eb' disabled - WC0E03 account issue
+// ── HELPERS ──────────────────────────────────────────────────────
+function el(id)  { return document.getElementById(id); }
+function g(id)   { return el(id) ? el(id).value.trim() : ''; }
+function esc(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmt(n)  { var x = parseFloat(String(n).replace(/,/g,'')); return isNaN(x) ? '0' : x.toLocaleString('en-IN'); }
+function show(id, v) { if(el(id)) el(id).style.display = v ? 'block' : 'none'; }
 
-var GATEWAY_LABELS = {
-  cf:  { name: 'Cashfree',  color: '#2563eb', selClass: 'sel-cf'  },
-  rzp: { name: 'Razorpay',  color: '#2563eb', selClass: 'sel-rzp' },
-  eb:  { name: 'Easebuzz',  color: '#f97316', selClass: 'sel-eb'  }
-};
+function showLoader(t) {
+  if(el('ltxt')) el('ltxt').textContent = t || 'Please wait...';
+  if(el('loader')) el('loader').classList.add('show');
+}
+function hideLoader() {
+  if(el('loader')) el('loader').classList.remove('show');
+}
 
-// ── STATE (private to this IIFE &mdash; no global pollution) ───────
+var _tt;
+function showToast(msg, type) {
+  var t = el('toast');
+  if(!t) return;
+  t.textContent = (type==='ok' ? '✅ ' : type==='err' ? '❌ ' : 'ℹ️ ') + msg;
+  t.className = 'toast show' + (type==='ok' ? ' tok' : type==='err' ? ' terr' : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ t.classList.remove('show'); }, 4500);
+}
+
+// ── STATE ────────────────────────────────────────────────────────
 var fd       = {};
 var selGW    = '';
 var discCode = '';
 var discAmt  = 0;
 var finalAmt = CFG.baseAmount;
-var _tt;
 
-// ── HELPERS ──────────────────────────────────────────────────────
-function el(id)  { return document.getElementById(id); }
-function g(id)   { return el(id).value.trim(); }
-function fmt(n)  { var x = typeof n==='string'?parseFloat(n.replace(/,/g,'')):Number(n); return isNaN(x)?'0':x.toLocaleString('en-IN'); }
-function esc(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-function show(id, v) { el(id).style.display = v ? 'block' : 'none'; }
-function showLoader(t) { el('ltxt').textContent = t || 'Please wait\u2026'; el('loader').classList.add('show'); }
-function hideLoader()  { el('loader').classList.remove('show'); }
-function showToast(msg, type) {
-  var t = el('toast');
-  t.textContent = (type==='ok' ? '\u2705 ' : type==='err' ? '\u274c ' : '\u2139\ufe0f ') + msg;
-  t.className   = 'toast show' + (type==='ok' ? ' tok' : type==='err' ? ' terr' : '');
-  clearTimeout(_tt);
-  _tt = setTimeout(function(){ t.classList.remove('show'); }, 4500);
-}
+var GATEWAY_SEQUENCE = ['cf', 'rzp'];
+var GATEWAY_LABELS = {
+  cf:  { name: 'Cashfree', color: '#2563eb', selClass: 'sel-cf' },
+  rzp: { name: 'Razorpay', color: '#2563eb', selClass: 'sel-rzp' }
+};
 
-// ── EMBED BUG 2 FIX: DOMContentLoaded may already be done ────
-// When script is embedded mid-page, 'DOMContentLoaded' has
-// already fired. readyState check ensures init always runs.
-function onReady(fn) {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', fn);
-  } else {
-    fn(); // DOM already ready &mdash; run immediately
-  }
-}
-
-onReady(function() {
-  // ── HANDLE EASEBUZZ RETURN (after payment redirect back) ───
-  var params  = new URLSearchParams(window.location.search);
-  var payment = (params.get('payment') || '').toLowerCase(); // normalize UPPERCASE from Cashfree
-  var gw      = params.get('gw');
-  var txnid   = params.get('txnid') || '';
-  var name    = params.get('name')  || '';
-  var amount  = params.get('amount')|| '1200';
-
-  // Update Easebuzz cancelled/failed row in sheet
-  if (gw === 'eb' && (payment === 'failed' || payment === 'cancelled')) {
-    saveToSheet({
-      studentName: name, gateway: 'Easebuzz',
-      status: 'Cancelled', paymentId: txnid,
-      finalAmount: Number(amount) || CFG.baseAmount,
-      program: CFG.program
-    });
-  }
-
-
-  // ── EMBED BUG 4 FIX: scope input listeners to card only ───
-  var card = el('atgCard');
-  if (card) {
-    card.querySelectorAll('input, select').forEach(function(inp) {
-      inp.addEventListener('input', function() {
-        inp.classList.remove('err');
-        var errEl = document.getElementById('e-' + inp.id);
-        if (errEl) errEl.classList.remove('show');
-      });
-    });
-  }
-
-  // Handle Cashfree return — Cashfree appends ?order_id=xxx automatically
-  // We detect our own ?cf=1 marker that we set in return_url
-  var cfOid  = params.get('cf_oid') || params.get('cf') || '';
-  var cfHash = window.location.hash;
-  if (cfOid || (cfHash && cfHash.indexOf('#cf/') === 0)) {
-    // Get values from query params (new) or hash (legacy)
-    var cfTxnid  = params.get('txnid') || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[0])||'') : '');
-    var cfName   = params.get('name')  || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[1])||'') : '');
-    var cfAmount = parseFloat(params.get('amount') || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[2])||'0') : '0')) || CFG.baseAmount;
-    // Clear hash from URL silently
-    window.history.replaceState({}, '', window.location.pathname);
-    if (cfTxnid) {
-      // Restore fd so payment step works
-      fd = {
-        studentName:  cfName,
-        parentName:   decodeURIComponent(hashParts[3] || ''),
-        contactPhone: decodeURIComponent(hashParts[4] || ''),
-        contactEmail: decodeURIComponent(hashParts[5] || ''),
-        schoolName:   decodeURIComponent(hashParts[6] || ''),
-        city:         decodeURIComponent(hashParts[7] || ''),
-        classGrade:   decodeURIComponent(hashParts[8] || ''),
-        gender:       decodeURIComponent(hashParts[9] || ''),
-        program:      CFG.program,
-        baseAmount:   CFG.baseAmount
-      };
-      finalAmt = cfAmount;
-      // Show loader while verifying
-      showLoader('Verifying payment…');
-      fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(cfTxnid) + '&_t=' + Date.now())
-        .then(function(r) { return r.json(); })
-        .then(function(res) {
-          hideLoader();
-          if (res.status === 'PAID') {
-            // Paid — show success screen
-            saveToSheet({
-              studentName: cfName, gateway: 'Cashfree', status: 'Paid',
-              paymentId: res.cf_payment_id || cfTxnid,
-              finalAmount: cfAmount, program: CFG.program
-            });
-            showSuccessScreen({
-              studentName: cfName, gateway: 'Cashfree',
-              paymentId: res.cf_payment_id || cfTxnid,
-              finalAmount: cfAmount, classGrade: fd.classGrade,
-              schoolName: fd.schoolName, city: fd.city,
-              discountCode: '', discountAmt: 0
-            });
-          } else {
-            // Cancelled/failed — update sheet and GO BACK TO PAYMENT STEP
-            saveToSheet({
-              studentName: cfName, gateway: 'Cashfree', status: 'Cancelled',
-              paymentId: cfTxnid, finalAmount: cfAmount, program: CFG.program
-            });
-            // Show review box with saved data
-            el('reviewBox').innerHTML =
-              '<div class="orow"><span class="olbl">Student</span><span class="oval">' + esc(cfName) + '</span></div>';
-            // Go to Step 2 — payment gateway selection
-            show('step1', false);
-            show('step2', true);
-            setStep(2);
-            // Update amounts
-            el('totalAmt').textContent = 'Rs.' + fmt(cfAmount);
-            showToast('Payment cancelled. Please select a gateway and try again.', 'err');
-          }
-        })
-        .catch(function() {
-          hideLoader();
-          // On error — still go to Step 2 so user can retry
-          show('step1', false);
-          show('step2', true);
-          setStep(2);
-          showToast('Payment verification failed. Please try again.', 'err');
-        });
-    }
-  }
-
-}); // end onReady
-
+// ── VALIDATION ───────────────────────────────────────────────────
 var rules = {
   studentName:  function(v){ return v.trim().length >= 2; },
   classGrade:   function(v){ return v !== ''; },
@@ -225,17 +63,18 @@ var rules = {
 function validate() {
   var ok = true;
   Object.keys(rules).forEach(function(id) {
-    var inp  = el(id);
+    var inp = el(id);
+    if(!inp) return;
     var pass = rules[id](inp.value);
     inp.classList.toggle('err', !pass);
-    el('e-' + id).classList.toggle('show', !pass);
-    if (!pass) ok = false;
+    var errEl = el('e-' + id);
+    if(errEl) errEl.classList.toggle('show', !pass);
+    if(!pass) ok = false;
   });
   return ok;
 }
 
-
-
+// ── STEP NAVIGATION ──────────────────────────────────────────────
 function goToPayment() {
   if (!validate()) { showToast('Please fill all fields correctly.', 'err'); return; }
   fd = {
@@ -245,98 +84,138 @@ function goToPayment() {
     contactPhone: g('contactPhone'), contactEmail: g('contactEmail'),
     program:      CFG.program,       baseAmount:   CFG.baseAmount
   };
-  el('reviewBox').innerHTML =
-    '<div class="orow"><span class="olbl">Student</span><span class="oval">' + esc(fd.studentName) + ' · ' + esc(fd.classGrade) + '</span></div>'
-  + '<div class="orow"><span class="olbl">School</span><span class="oval">'  + esc(fd.schoolName)  + ', ' + esc(fd.city) + '</span></div>'
-  + '<div class="orow"><span class="olbl">Parent</span><span class="oval">'  + esc(fd.parentName)  + '</span></div>'
-  + '<div class="orow"><span class="olbl">Phone</span><span class="oval">'   + esc(fd.contactPhone) + '</span></div>'
+  var rb = el('reviewBox');
+  if(rb) rb.innerHTML =
+    '<div class="orow"><span class="olbl">Student</span><span class="oval">' + esc(fd.studentName) + ' - ' + esc(fd.classGrade) + '</span></div>'
+  + '<div class="orow"><span class="olbl">School</span><span class="oval">' + esc(fd.schoolName) + ', ' + esc(fd.city) + '</span></div>'
+  + '<div class="orow"><span class="olbl">Parent</span><span class="oval">' + esc(fd.parentName) + '</span></div>'
+  + '<div class="orow"><span class="olbl">Phone</span><span class="oval">' + esc(fd.contactPhone) + '</span></div>'
   + '<div class="orow" style="border-bottom:none"><span class="olbl">Email</span><span class="oval">' + esc(fd.contactEmail) + '</span></div>';
   show('step1', false); show('step2', true); setStep(2);
+  renderGateways();
+  updateAmountDisplay();
 }
 
-function goBack()        { show('step2',false); show('step1',true); setStep(1); }
-function retryPayment()  { window.location.href = 'https://thynksuccess.com/registration/'; }
-
-function show(id, v) { el(id).style.display = v ? 'block' : 'none'; }
+function goBack() { show('step2', false); show('step1', true); setStep(1); }
+function retryPayment() { window.location.href = 'https://thynksuccess.com/registration/'; }
 
 function setStep(n) {
   [1,2,3].forEach(function(i){
     var d = el('sd'+i), sn = el('sn'+i);
+    if(!d) return;
     d.classList.remove('active','done');
-    if (i < n)       { d.classList.add('done');   sn.textContent = '&#10003;'; }
-    else if (i === n)  d.classList.add('active');
-    else               sn.textContent = i;
+    if (i < n)      { d.classList.add('done'); if(sn) sn.textContent = '✓'; }
+    else if(i === n)  d.classList.add('active');
+    else              { if(sn) sn.textContent = String(i); }
   });
 }
 
-// ── GATEWAY SELECT ───────────────────────────────────────────
+function updateAmountDisplay() {
+  if(el('totalAmt')) el('totalAmt').textContent = 'Rs.' + fmt(finalAmt);
+  if(selGW) selectGW(selGW);
+}
+
+// ── GATEWAY RENDER ───────────────────────────────────────────────
+function renderGateways() {
+  var container = el('gwContainer');
+  if(!container) return;
+  container.innerHTML = '';
+  GATEWAY_SEQUENCE.forEach(function(gw) {
+    var info = GATEWAY_LABELS[gw];
+    if(!info) return;
+    var div = document.createElement('div');
+    div.className = 'gw-btn';
+    div.id = 'gw' + gw.charAt(0).toUpperCase() + gw.slice(1);
+    div.onclick = function(){ selectGW(gw); };
+    div.innerHTML = '<div class="gw-info"><div class="gw-name">' + info.name + '</div><div class="gw-sub">UPI, Cards, Wallets</div></div><div class="gw-tick">&#10003;</div>';
+    container.appendChild(div);
+  });
+}
+
 function selectGW(gw) {
   selGW = gw;
-  // Update all gateway buttons based on GATEWAY_SEQUENCE
   GATEWAY_SEQUENCE.forEach(function(g) {
     var btn = el('gw' + g.charAt(0).toUpperCase() + g.slice(1));
-    if (btn) btn.className = 'gw-btn' + (gw === g ? ' ' + GATEWAY_LABELS[g].selClass : '');
+    if(btn) btn.className = 'gw-btn' + (gw === g ? ' ' + GATEWAY_LABELS[g].selClass : '');
   });
   var info = GATEWAY_LABELS[gw] || { name: gw, color: '#2563eb' };
   var btn = el('payBtn');
-  btn.disabled  = false;
-  btn.className = 'btn-next';
-  btn.style.background = info.color;
-  btn.textContent = 'Pay Rs.' + fmt(finalAmt) + ' via ' + info.name;
-  el('gwLabel').textContent = info.name;
+  if(btn) {
+    btn.disabled = false;
+    btn.className = 'btn-next';
+    btn.style.background = info.color;
+    btn.textContent = 'Pay Rs.' + fmt(finalAmt) + ' via ' + info.name;
+  }
+  if(el('gwLabel')) el('gwLabel').textContent = info.name;
 }
 
-// ── DISCOUNT ─────────────────────────────────────────────────
+// ── DISCOUNT ─────────────────────────────────────────────────────
 async function applyDiscount() {
-  var code = el('discCode').value.trim().toUpperCase();
+  var code = el('discCode') ? el('discCode').value.trim().toUpperCase() : '';
   var inp  = el('discCode');
   var msg  = el('discMsg');
-  if (!code) { msg.className='disc-msg fail'; msg.textContent='Please enter a code.'; return; }
-  showLoader('Validating code&#8230;');
+  if(!code) { if(msg){ msg.className='disc-msg fail'; msg.textContent='Please enter a code.'; } return; }
+  showLoader('Validating code...');
   try {
-    var res  = await fetch(CFG.sheetsURL + '?action=discount&code=' + encodeURIComponent(code));
+    var res  = await fetch(CFG.sheetsURL + '?action=discount&code=' + encodeURIComponent(code) + '&_t=' + Date.now());
     var data = await res.json();
     hideLoader();
-    if (data.valid) {
+    if(data.valid) {
       discCode = code; discAmt = data.discount; finalAmt = data.finalAmount;
-      inp.className = 'disc-ok';
-      msg.className = 'disc-msg ok';
-      msg.textContent = '&#9989; ' + data.message;
-      el('discRow').style.display = 'flex';
-      el('discAmt').textContent   = '&mdash; Rs.' + fmt(discAmt);
-      el('totalAmt').textContent  = 'Rs.' + fmt(finalAmt);
-      if (selGW) selectGW(selGW);
+      if(inp) inp.className = 'disc-ok';
+      if(msg){ msg.className='disc-msg ok'; msg.textContent = data.message; }
+      if(el('discRow')) el('discRow').style.display = 'flex';
+      if(el('discAmt')) el('discAmt').textContent = '- Rs.' + fmt(discAmt);
+      if(el('totalAmt')) el('totalAmt').textContent = 'Rs.' + fmt(finalAmt);
+      if(selGW) selectGW(selGW);
       showToast('Discount applied! Saving Rs.' + fmt(discAmt), 'ok');
     } else {
-      inp.className = 'disc-err';
-      msg.className = 'disc-msg fail';
-      msg.textContent = '&#10060; ' + data.message;
+      if(inp) inp.className = 'disc-err';
+      if(msg){ msg.className='disc-msg fail'; msg.textContent = data.message; }
       discCode=''; discAmt=0; finalAmt=CFG.baseAmount;
-      el('discRow').style.display = 'none';
-      el('totalAmt').textContent  = 'Rs.' + fmt(finalAmt);
-      if (selGW) selectGW(selGW);
+      if(el('discRow')) el('discRow').style.display = 'none';
+      if(el('totalAmt')) el('totalAmt').textContent = 'Rs.' + fmt(finalAmt);
+      if(selGW) selectGW(selGW);
     }
   } catch(e) {
     hideLoader();
-    msg.className = 'disc-msg fail';
-    msg.textContent = '&#10060; Could not validate. Try again.';
+    if(msg){ msg.className='disc-msg fail'; msg.textContent='Could not validate. Try again.'; }
   }
 }
 
-// ── PAYMENT ROUTER ───────────────────────────────────────────
-function startPayment() {
-  if (!selGW) { showToast('Please select a payment method.', 'err'); return; }
-  if (selGW === 'rzp') startRazorpay();
-  else if (selGW === 'cf') startCashfree();
-  else startEasebuzz();
+// ── SAVE TO SHEET ────────────────────────────────────────────────
+async function saveToSheet(d) {
+  try {
+    var payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+    await fetch(CFG.sheetsURL + '?action=save&data=' + encodeURIComponent(payload) + '&_t=' + Date.now());
+  } catch(e) {
+    console.log('saveToSheet error:', e.message);
+  }
 }
 
-// ── RAZORPAY ─────────────────────────────────────────────────
+// ── PAYMENT ROUTER ───────────────────────────────────────────────
+function startPayment() {
+  if(!selGW) { showToast('Please select a payment method.', 'err'); return; }
+  if(selGW === 'rzp') startRazorpay();
+  else if(selGW === 'cf') startCashfree();
+}
+
+// ── RAZORPAY ─────────────────────────────────────────────────────
+function loadRazorpay() {
+  return new Promise(function(resolve) {
+    if(window.Razorpay) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    s.onload = resolve; s.onerror = resolve;
+    document.head.appendChild(s);
+  });
+}
+
 async function startRazorpay() {
-  el('payBtn').disabled = true;
+  if(el('payBtn')) el('payBtn').disabled = true;
   await loadRazorpay();
   try {
-    var rzp = new Razorpay({
+    var rzp = new window.Razorpay({
       key:         CFG.razorpayKeyId,
       amount:      finalAmt * 100,
       currency:    'INR',
@@ -344,50 +223,64 @@ async function startRazorpay() {
       description: CFG.program,
       prefill:     { name: fd.studentName, email: fd.contactEmail, contact: fd.contactPhone },
       notes: {
-        student_name: fd.studentName, parent_name: fd.parentName,
-        school: fd.schoolName, city: fd.city,
-        class_grade: fd.classGrade, gender: fd.gender
+        student_name: fd.studentName, parent_name:  fd.parentName,
+        school:       fd.schoolName,  city:          fd.city,
+        class_grade:  fd.classGrade,  gender:        fd.gender
       },
       theme: { color: '#2563eb' },
       handler: async function(response) {
-        fd.status='Paid'; fd.paymentId=response.razorpay_payment_id;
-        fd.gateway='Razorpay'; fd.discountCode=discCode;
-        fd.discountAmt=discAmt; fd.finalAmount=finalAmt;
-        showLoader('Saving registration&#8230;');
-        await saveToSheet(fd);
+        showLoader('Saving registration...');
+        await saveToSheet({
+          studentName: fd.studentName, parentName: fd.parentName,
+          contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
+          schoolName: fd.schoolName, city: fd.city,
+          classGrade: fd.classGrade, gender: fd.gender,
+          gateway: 'Razorpay', status: 'Paid',
+          baseAmount: CFG.baseAmount, discountCode: discCode,
+          discountAmt: discAmt, finalAmount: finalAmt,
+          paymentId: response.razorpay_payment_id, program: CFG.program
+        });
         hideLoader();
-        showSuccessScreen(fd);
+        showSuccessScreen({
+          studentName: fd.studentName, gateway: 'Razorpay',
+          paymentId: response.razorpay_payment_id, finalAmount: finalAmt,
+          classGrade: fd.classGrade, schoolName: fd.schoolName,
+          city: fd.city, discountCode: discCode, discountAmt: discAmt
+        });
       },
       modal: { ondismiss: async function() {
-        fd.status='Cancelled'; fd.gateway='Razorpay';
-        fd.paymentId=''; fd.discountCode=discCode;
-        fd.discountAmt=discAmt; fd.finalAmount=finalAmt;
-        await saveToSheet(fd);
-        el('payBtn').disabled = false;
-        showToast('Payment cancelled.', 'err');
+        await saveToSheet({
+          studentName: fd.studentName, gateway: 'Razorpay', status: 'Cancelled',
+          baseAmount: CFG.baseAmount, discountCode: discCode,
+          discountAmt: discAmt, finalAmount: finalAmt,
+          paymentId: '', program: CFG.program
+        });
+        if(el('payBtn')) el('payBtn').disabled = false;
+        showToast('Payment cancelled. Please try again.', 'err');
       }}
     });
     rzp.on('payment.failed', async function(resp) {
-      fd.status='Failed'; fd.gateway='Razorpay';
-      fd.paymentId=(resp.error.metadata && resp.error.metadata.payment_id) || '';
-      fd.discountCode=discCode; fd.discountAmt=discAmt; fd.finalAmount=finalAmt;
-      await saveToSheet(fd);
-      el('payBtn').disabled = false;
+      await saveToSheet({
+        studentName: fd.studentName, gateway: 'Razorpay', status: 'Failed',
+        baseAmount: CFG.baseAmount, discountCode: discCode,
+        discountAmt: discAmt, finalAmount: finalAmt,
+        paymentId: (resp.error.metadata && resp.error.metadata.payment_id) || '',
+        program: CFG.program
+      });
+      if(el('payBtn')) el('payBtn').disabled = false;
       showToast('Payment failed. Please try again.', 'err');
     });
     rzp.open();
   } catch(e) {
-    el('payBtn').disabled = false;
-    showToast('Could not open Razorpay. Refresh and try again.', 'err');
+    if(el('payBtn')) el('payBtn').disabled = false;
+    showToast('Could not open Razorpay. Please refresh and try again.', 'err');
   }
 }
-
-
 
 // ── CASHFREE ─────────────────────────────────────────────────────
 function loadCashfree() {
   return new Promise(function(resolve) {
-    if (window.Cashfree) { resolve(); return; }
+    if(window.Cashfree) { resolve(); return; }
     var s = document.createElement('script');
     s.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
     s.onload = resolve; s.onerror = resolve;
@@ -396,13 +289,12 @@ function loadCashfree() {
 }
 
 async function startCashfree() {
-  el('payBtn').disabled = true;
-  showLoader('Preparing Cashfree payment&#8230;');
+  if(el('payBtn')) el('payBtn').disabled = true;
+  showLoader('Preparing Cashfree payment...');
   try {
     var amt   = finalAmt.toFixed(2);
     var txnid = 'ATG' + Date.now();
 
-    // Save initiated row to sheet
     await saveToSheet({
       studentName: fd.studentName, parentName: fd.parentName,
       contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
@@ -414,8 +306,8 @@ async function startCashfree() {
       paymentId: txnid, program: CFG.program
     });
 
-    // Get payment_session_id from Apps Script (server-to-server)
-    var params = '?action=cfinit'
+    var resp = await fetch(CFG.sheetsURL
+      + '?action=cfinit'
       + '&txnid='     + encodeURIComponent(txnid)
       + '&amount='    + encodeURIComponent(amt)
       + '&firstname=' + encodeURIComponent(fd.studentName  || '')
@@ -426,179 +318,130 @@ async function startCashfree() {
       + '&udf3='      + encodeURIComponent(fd.city         || '')
       + '&udf4='      + encodeURIComponent(fd.classGrade   || '')
       + '&udf5='      + encodeURIComponent(fd.gender       || '')
-      + '&_t='        + Date.now();
-
-    var resp   = await fetch(CFG.sheetsURL + params);
+      + '&_t='        + Date.now()
+    );
     var result = await resp.json();
 
-    if (!result.success || !result.payment_session_id) {
+    if(!result.success || !result.payment_session_id) {
       hideLoader();
-      el('payBtn').disabled = false;
+      if(el('payBtn')) el('payBtn').disabled = false;
       showToast('Cashfree error: ' + (result.error || 'Could not initiate payment'), 'err');
       return;
     }
 
-    // Load Cashfree SDK and open payment
     await loadCashfree();
     hideLoader();
 
-    // Save form data to sessionStorage before redirect
-    // So we can restore Step 2 when page reloads after payment
-    try {
-      sessionStorage.setItem('atg_fd', JSON.stringify(fd));
-      sessionStorage.setItem('atg_finalAmt', String(finalAmt));
-      sessionStorage.setItem('atg_discCode', discCode || '');
-      sessionStorage.setItem('atg_discAmt', String(discAmt || 0));
-    } catch(se) {}
-
-    // Cashfree SDK v3 - open payment page
-    // {order_id} is REQUIRED placeholder - Cashfree replaces with actual order_id
-    var cfReturnUrl = 'https://thynksuccess.com/registration/?cf_oid={order_id}&txnid='
-      + encodeURIComponent(txnid) + '&name='
-      + encodeURIComponent(fd.studentName || '') + '&amount='
-      + encodeURIComponent(amt);
     var cashfree = window.Cashfree({ mode: 'production' });
-    // returnUrl is set in the order (Apps Script) - do NOT pass it here
-    // Using '_self' as per Cashfree docs for redirect checkout
     cashfree.checkout({
       paymentSessionId: result.payment_session_id,
       redirectTarget:   '_self'
     });
-    // No await - page will redirect, code below won't run
 
   } catch(e) {
     hideLoader();
-    el('payBtn').disabled = false;
+    if(el('payBtn')) el('payBtn').disabled = false;
     showToast('Cashfree error: ' + e.message, 'err');
   }
 }
 
-// ── EASEBUZZ ─────────────────────────────────────────────────
-async function startEasebuzz() {
-  el('payBtn').disabled = true;
-  showLoader('Preparing Easebuzz payment&#8230;');
-  try {
-    var amt = finalAmt.toFixed(2);
-    var txnid = 'ATG' + Date.now();
-
-    // Save initiated row to sheet first
-    await saveToSheet({
-      studentName: fd.studentName, parentName: fd.parentName,
-      contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
-      schoolName: fd.schoolName, city: fd.city,
-      classGrade: fd.classGrade, gender: fd.gender,
-      gateway: 'Easebuzz', status: 'Initiated',
-      baseAmount: CFG.baseAmount, discountCode: discCode,
-      discountAmt: discAmt, finalAmount: finalAmt,
-      paymentId: txnid, program: CFG.program
-    });
-
-    // Call Apps Script to get Easebuzz access_key (server-to-server, no CORS)
-    var params = '?action=ebinit'
-      + '&txnid='       + encodeURIComponent(txnid)
-      + '&amount='      + encodeURIComponent(amt)
-      + '&productinfo=' + encodeURIComponent(CFG.program)
-      + '&firstname='   + encodeURIComponent(fd.studentName   || '')
-      + '&email='       + encodeURIComponent(fd.contactEmail  || '')
-      + '&phone='       + encodeURIComponent(fd.contactPhone  || '')
-      + '&udf1='        + encodeURIComponent(fd.parentName    || '')
-      + '&udf2='        + encodeURIComponent(fd.schoolName    || '')
-      + '&udf3='        + encodeURIComponent(fd.city          || '')
-      + '&udf4='        + encodeURIComponent(fd.classGrade    || '')
-      + '&udf5='        + encodeURIComponent(fd.gender        || '')
-      + '&_t='          + Date.now();
-
-    var resp   = await fetch(CFG.sheetsURL + params);
-    var result = await resp.json();
-    hideLoader();
-
-    if (!result.success || !result.access_key) {
-      el('payBtn').disabled = false;
-      showToast('Easebuzz error: ' + (result.error || 'Could not initiate payment'), 'err');
-      return;
-    }
-
-    // POST form to Easebuzz with access_key (GET redirect returns 404)
-    var form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://pay.easebuzz.in/pay/init';
-    form.target = '_top';
-    form.style.display = 'none';
-    var inp = document.createElement('input');
-    inp.type = 'hidden';
-    inp.name = 'access_key';
-    inp.value = result.access_key;
-    form.appendChild(inp);
-    document.body.appendChild(form);
-    form.submit();
-
-  } catch(e) {
-    hideLoader();
-    el('payBtn').disabled = false;
-    showToast('Easebuzz error: ' + e.message, 'err');
-  }
-}
-
-// ── SAVE TO SHEET ────────────────────────────────────────────
-// POST with Content-Type: text/plain &mdash; the only CORS-safe write method:
-//   &#8226; GET  &#8594; cached by Google CDN &#8594; script never reruns &#8594; sheet empty
-//   &#8226; POST application/json &#8594; triggers CORS preflight &#8594; Apps Script
-//     ignores OPTIONS &#8594; browser blocks request &#8594; sheet empty
-//   &#8226; POST text/plain &#8594; "simple request" per CORS spec &#8594; no preflight
-//     &#8594; goes straight through &#8594; Apps Script JSON.parses body &#8594; &#9989; works
-async function saveToSheet(data) {
-  // POST with Content-Type: text/plain = "simple request" per CORS spec.
-  // No preflight. Apps Script receives it via doPost(e).
-  // mode: 'no-cors' means we can't read the response - that's fine for saves.
-  // We only need fire-and-forget for sheet writes.
-  try {
-    await fetch(CFG.sheetsURL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(data)
-    });
-    return { success: true };
-  } catch(e) {
-    console.error('saveToSheet fetch error:', e);
-    return { success: false };
-  }
-}
-
-// ── SUCCESS SCREEN ───────────────────────────────────────────
+// ── SUCCESS SCREEN ───────────────────────────────────────────────
 function showSuccessScreen(d) {
-  show('step2', false);
-  el('step3').classList.add('show');
-  setStep(3);
-  el('sdetail').innerHTML =
-    row('Student',    esc(d.studentName))
-  + row('Class',      esc(d.classGrade))
-  + row('School',     esc(d.schoolName) + ', ' + esc(d.city))
-  + row('Parent',     esc(d.parentName))
-  + row('Amount Paid','<span style="color:var(--green)">Rs.' + fmt(d.finalAmount) + ' &#10003;</span>')
-  + (d.discountCode ? row('Discount','<span style="color:var(--green)">' + esc(d.discountCode) + ' (Rs.' + fmt(d.discountAmt) + ' saved)</span>') : '')
-  + row('Via',        esc(d.gateway))
-  + row('Payment ID', '<span style="font-size:12px;color:var(--m)">' + esc(d.paymentId) + '</span>', true);
-  showToast('Registration confirmed! &#9989;', 'ok');
-  startRedirectTimer();
+  show('step1', false); show('step2', false); show('step3', true); setStep(3);
+  var sc = el('successContent');
+  if(!sc) return;
+  sc.innerHTML =
+    '<div style="text-align:center;padding:24px">'
+  + '<div style="font-size:56px">🎉</div>'
+  + '<h2 style="color:#059669;margin:12px 0">Registration Confirmed!</h2>'
+  + '<p style="color:#64748b">Welcome to ATGenius Coaching Program</p>'
+  + '<table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:14px">'
+  + '<tr style="background:#f8faff"><td style="padding:10px;color:#64748b">Student</td><td style="padding:10px;font-weight:600;text-align:right">' + esc(d.studentName||'') + '</td></tr>'
+  + '<tr><td style="padding:10px;color:#64748b">Gateway</td><td style="padding:10px;font-weight:600;text-align:right">' + esc(d.gateway||'') + '</td></tr>'
+  + '<tr style="background:#f8faff"><td style="padding:10px;color:#64748b">Amount Paid</td><td style="padding:10px;font-weight:700;color:#059669;text-align:right">Rs.' + fmt(d.finalAmount||0) + '</td></tr>'
+  + '<tr><td style="padding:10px;color:#64748b">Payment ID</td><td style="padding:10px;font-size:12px;color:#94a3b8;text-align:right">' + esc(d.paymentId||'-') + '</td></tr>'
+  + '</table>'
+  + '<p style="margin-top:20px;font-size:14px;color:#64748b">Our team will call you within <strong>24 hours</strong> with program details.</p>'
+  + '</div>';
 }
 
-function startRedirectTimer() {
-  var count = 5, rc = el('rcount');
-  var t = setInterval(function(){
-    count--; rc.textContent = count;
-    if (count <= 0) { clearInterval(t); window.location.href = CFG.redirectURL; }
-  }, 1000);
+// ── CASHFREE RETURN HANDLER ──────────────────────────────────────
+function handleCashfreeReturn() {
+  var params  = new URLSearchParams(window.location.search);
+  var cfOid   = params.get('cf_oid') || '';
+  var txnid   = params.get('txnid')  || '';
+  var name    = params.get('name')   || '';
+  var amount  = parseFloat(params.get('amount') || CFG.baseAmount) || CFG.baseAmount;
+
+  if(!cfOid && !txnid) return;
+
+  window.history.replaceState({}, '', window.location.pathname);
+  var verifyId = txnid || cfOid;
+
+  showLoader('Verifying payment...');
+  fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(verifyId) + '&_t=' + Date.now())
+    .then(function(r){ return r.json(); })
+    .then(function(res) {
+      hideLoader();
+      if(res.status === 'PAID') {
+        saveToSheet({
+          studentName: name, gateway: 'Cashfree', status: 'Paid',
+          paymentId: res.cf_payment_id || verifyId,
+          finalAmount: amount, program: CFG.program
+        });
+        showSuccessScreen({
+          studentName: name, gateway: 'Cashfree',
+          paymentId: res.cf_payment_id || verifyId,
+          finalAmount: amount
+        });
+      } else {
+        saveToSheet({
+          studentName: name, gateway: 'Cashfree', status: 'Cancelled',
+          paymentId: verifyId, finalAmount: amount, program: CFG.program
+        });
+        show('step1', false); show('step2', true); setStep(2);
+        renderGateways();
+        updateAmountDisplay();
+        showToast('Payment cancelled. Please select a gateway and try again.', 'err');
+      }
+    })
+    .catch(function() {
+      hideLoader();
+      show('step1', false); show('step2', true); setStep(2);
+      renderGateways();
+      showToast('Could not verify payment. Please try again.', 'err');
+    });
 }
 
-// ── EXPOSE to onclick= handlers in HTML (must be on window) ──
-console.log('[ATG] Reached exports');
-window.goToPayment  = goToPayment;
-window.goBack       = goBack;
-window.selectGW     = selectGW;
-window.applyDiscount= applyDiscount;
-window.startPayment = startPayment;
-window.retryPayment = retryPayment;
-window.startCashfree= startCashfree;
+// ── INIT ─────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  // Scope input listeners to registration card only
+  var card = el('atgCard');
+  if(card) {
+    card.querySelectorAll('input, select').forEach(function(inp) {
+      inp.addEventListener('input', function() {
+        inp.classList.remove('err');
+        var errEl = el('e-' + inp.id);
+        if(errEl) errEl.classList.remove('show');
+      });
+    });
+  }
+  // Handle Cashfree return
+  handleCashfreeReturn();
+});
 
-})(); // end IIFE
+// If DOM already loaded, run immediately
+if(document.readyState !== 'loading') {
+  handleCashfreeReturn();
+}
+
+// ── EXPOSE TO HTML onclick= HANDLERS ────────────────────────────
+window.goToPayment   = goToPayment;
+window.goBack        = goBack;
+window.selectGW      = selectGW;
+window.applyDiscount = applyDiscount;
+window.startPayment  = startPayment;
+window.retryPayment  = retryPayment;
+window.startCashfree = startCashfree;
+
+console.log('[ATG] Registration script loaded. startCashfree:', typeof startCashfree);
