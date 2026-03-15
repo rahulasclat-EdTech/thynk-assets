@@ -394,9 +394,21 @@ function handleCashfreeReturn() {
   var verifyId = txnid || cfOid;
 
   // Show step2 immediately so user sees payment page while verifying
-  show('step1', false); show('step2', true); setStep(2);
+  // First make sure step1 is hidden and step2 visible
+  show('step1', false);
+  show('step2', true);
+  show('step3', false);
+  setStep(2);
   renderGateways();
   updateAmountDisplay();
+
+  // Populate reviewBox with name from URL params
+  var rb = el('reviewBox');
+  if(rb && name) {
+    rb.innerHTML = '<div class="orow"><span class="olbl">Student</span><span class="oval">' + esc(name) + '</span></div>'
+      + '<div class="orow" style="border-bottom:none"><span class="olbl">Amount</span><span class="oval">Rs.' + fmt(amount) + '</span></div>';
+  }
+
   showLoader('Verifying payment...');
 
   fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(verifyId) + '&_t=' + Date.now())
