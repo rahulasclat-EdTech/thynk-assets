@@ -44,7 +44,7 @@ function loadRazorpay() {
 // ── CONFIG ───────────────────────────────────────────────────
 var CFG = {
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbxUd1SDLxKH9IbfAU0nMhLeYB6OebWSB9bS2YVW3bye1Qfvzh7WTp-MEzC063loOsNVsw/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbww4W_Mg_06A8_cfNSGdET_ZHoao6iON4kpdnnG57ZaXTdYZrUa4RYDSQwh1Bo6CLf3xg/exec',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
