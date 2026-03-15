@@ -75,6 +75,22 @@ var discAmt  = 0;
 var finalAmt = CFG.baseAmount;
 var _tt;
 
+// ── HELPERS ──────────────────────────────────────────────────────
+function el(id)  { return document.getElementById(id); }
+function g(id)   { return el(id).value.trim(); }
+function fmt(n)  { var x = typeof n==='string'?parseFloat(n.replace(/,/g,'')):Number(n); return isNaN(x)?'0':x.toLocaleString('en-IN'); }
+function esc(s)  { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function show(id, v) { el(id).style.display = v ? 'block' : 'none'; }
+function showLoader(t) { el('ltxt').textContent = t || 'Please wait\u2026'; el('loader').classList.add('show'); }
+function hideLoader()  { el('loader').classList.remove('show'); }
+function showToast(msg, type) {
+  var t = el('toast');
+  t.textContent = (type==='ok' ? '\u2705 ' : type==='err' ? '\u274c ' : '\u2139\ufe0f ') + msg;
+  t.className   = 'toast show' + (type==='ok' ? ' tok' : type==='err' ? ' terr' : '');
+  clearTimeout(_tt);
+  _tt = setTimeout(function(){ t.classList.remove('show'); }, 4500);
+}
+
 // ── EMBED BUG 2 FIX: DOMContentLoaded may already be done ────
 // When script is embedded mid-page, 'DOMContentLoaded' has
 // already fired. readyState check ensures init always runs.
@@ -218,7 +234,8 @@ function validate() {
   return ok;
 }
 
-// ── STEP NAVIGATION ──────────────────────────────────────────
+
+
 function goToPayment() {
   if (!validate()) { showToast('Please fill all fields correctly.', 'err'); return; }
   fd = {
