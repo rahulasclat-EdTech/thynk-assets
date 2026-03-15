@@ -44,7 +44,7 @@ function loadRazorpay() {
 // ── CONFIG ───────────────────────────────────────────────────
 var CFG = {
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbww4W_Mg_06A8_cfNSGdET_ZHoao6iON4kpdnnG57ZaXTdYZrUa4RYDSQwh1Bo6CLf3xg/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbxTgJIE4XAqFhQ_SHd0TfBx_bYm4htRlWoWq3ENxSfmVtIFaaUw9YxMy3HCZpg94BpH-Q/exec',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
@@ -120,9 +120,9 @@ onReady(function() {
 
   // Handle Cashfree return — Cashfree appends ?order_id=xxx automatically
   // We detect our own ?cf=1 marker that we set in return_url
-  var cfFlag = params.get('cf');
+  var cfOid  = params.get('cf_oid') || params.get('cf') || '';
   var cfHash = window.location.hash;
-  if (cfFlag === '1' || (cfHash && cfHash.indexOf('#cf/') === 0)) {
+  if (cfOid || (cfHash && cfHash.indexOf('#cf/') === 0)) {
     // Get values from query params (new) or hash (legacy)
     var cfTxnid  = params.get('txnid') || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[0])||'') : '');
     var cfName   = params.get('name')  || (cfHash ? decodeURIComponent((cfHash.replace('#cf/','').split('/')[1])||'') : '');
@@ -435,8 +435,8 @@ async function startCashfree() {
     } catch(se) {}
 
     // Cashfree SDK v3 - open payment page
-    // Simple return URL - Cashfree appends order_id automatically
-    var cfReturnUrl = 'https://thynksuccess.com/registration/?cf=1&txnid='
+    // {order_id} is REQUIRED placeholder - Cashfree replaces with actual order_id
+    var cfReturnUrl = 'https://thynksuccess.com/registration/?cf_oid={order_id}&txnid='
       + encodeURIComponent(txnid) + '&name='
       + encodeURIComponent(fd.studentName || '') + '&amount='
       + encodeURIComponent(amt);
