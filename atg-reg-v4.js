@@ -42,7 +42,7 @@ var discCode = '';
 var discAmt  = 0;
 var finalAmt = CFG.baseAmount;
 
-var GATEWAY_SEQUENCE = ['cf', 'rzp'];
+var GATEWAY_SEQUENCE = ['rzp', 'cf'];
 var GATEWAY_LABELS = {
   cf:  { name: 'Cashfree', color: '#2563eb', selClass: 'sel-cf' },
   rzp: { name: 'Razorpay', color: '#2563eb', selClass: 'sel-rzp' }
