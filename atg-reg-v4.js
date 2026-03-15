@@ -592,13 +592,13 @@ function startRedirectTimer() {
 }
 
 // ── EXPOSE to onclick= handlers in HTML (must be on window) ──
-// Since everything is in an IIFE, onclick="goToPayment()" in the HTML
-// won't find the function unless we explicitly attach to window.
+console.log('[ATG] Reached exports');
 window.goToPayment  = goToPayment;
 window.goBack       = goBack;
 window.selectGW     = selectGW;
 window.applyDiscount= applyDiscount;
 window.startPayment = startPayment;
 window.retryPayment = retryPayment;
+window.startCashfree= startCashfree;
 
 })(); // end IIFE
