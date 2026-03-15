@@ -2,7 +2,7 @@
 // Cashfree + Razorpay | thynksuccess.com/registration/
 
 var CFG = {
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbxTgJIE4XAqFhQ_SHd0TfBx_bYm4htRlWoWq3ENxSfmVtIFaaUw9YxMy3HCZpg94BpH-Q/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbwjq4dryo5WlhIMF0C7sg600Em5EAARiVnjLNaf6Iys7lM9XusNEqK55CZRR42mnSRZFA/exec',
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
@@ -353,33 +353,46 @@ async function startCashfree() {
 
 // ── SUCCESS SCREEN ───────────────────────────────────────────────
 function showSuccessScreen(d) {
-  show('step1', false); show('step2', false); show('step3', true); setStep(3);
-  var sc = el('successContent');
-  if(!sc) return;
-  sc.innerHTML =
-    '<div style="text-align:center;padding:24px">'
-  + '<div style="font-size:56px">🎉</div>'
-  + '<h2 style="color:#059669;margin:12px 0">Registration Confirmed!</h2>'
-  + '<p style="color:#64748b">Welcome to ATGenius Coaching Program</p>'
-  + '<table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:14px">'
-  + '<tr style="background:#f8faff"><td style="padding:10px;color:#64748b">Student</td><td style="padding:10px;font-weight:600;text-align:right">' + esc(d.studentName||'') + '</td></tr>'
-  + '<tr><td style="padding:10px;color:#64748b">Gateway</td><td style="padding:10px;font-weight:600;text-align:right">' + esc(d.gateway||'') + '</td></tr>'
-  + '<tr style="background:#f8faff"><td style="padding:10px;color:#64748b">Amount Paid</td><td style="padding:10px;font-weight:700;color:#059669;text-align:right">Rs.' + fmt(d.finalAmount||0) + '</td></tr>'
-  + '<tr><td style="padding:10px;color:#64748b">Payment ID</td><td style="padding:10px;font-size:12px;color:#94a3b8;text-align:right">' + esc(d.paymentId||'-') + '</td></tr>'
-  + '</table>'
-  + '<p style="margin-top:20px;font-size:14px;color:#64748b">Our team will call you within <strong>24 hours</strong> with program details.</p>'
+  // Hide all steps, show step3
+  show('step1', false); show('step2', false);
+  var s3 = el('step3');
+  if(s3) s3.style.display = 'block';
+  if(el('stepFailed')) el('stepFailed').style.display = 'none';
+  setStep(3);
+  // Populate sdetail with payment info
+  var sc = el('sdetail');
+  if(sc) sc.innerHTML =
+    '<div style="background:#f0fdf4;border-radius:10px;padding:14px;margin:12px 0;font-size:14px">'
+  + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #d1fae5"><span style="color:#64748b">Student</span><span style="font-weight:600">' + esc(d.studentName||'') + '</span></div>'
+  + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #d1fae5"><span style="color:#64748b">Gateway</span><span style="font-weight:600">' + esc(d.gateway||'') + '</span></div>'
+  + '<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #d1fae5"><span style="color:#64748b">Amount Paid</span><span style="font-weight:700;color:#059669">Rs.' + fmt(d.finalAmount||0) + '</span></div>'
+  + '<div style="display:flex;justify-content:space-between;padding:6px 0"><span style="color:#64748b">Payment ID</span><span style="font-size:11px;color:#94a3b8">' + esc(d.paymentId||'-') + '</span></div>'
   + '</div>';
+  // Start redirect timer
+  startRedirectTimer();
+}
+
+function startRedirectTimer() {
+  var count = 5;
+  var rc = el('rcount');
+  var t = setInterval(function(){
+    count--;
+    if(rc) rc.textContent = count;
+    if(count <= 0) { clearInterval(t); window.location.href = CFG.redirectURL; }
+  }, 1000);
 }
 
 // ── CASHFREE RETURN HANDLER ──────────────────────────────────────
 function handleCashfreeReturn() {
-  var params  = new URLSearchParams(window.location.search);
-  var cfOid   = params.get('cf_oid') || '';
-  var txnid   = params.get('txnid')  || '';
-  var name    = params.get('name')   || '';
-  var amount  = parseFloat(params.get('amount') || CFG.baseAmount) || CFG.baseAmount;
-
-  if(!cfOid && !txnid) return;
+  // Read from hash: #cf/txnid/name/amount
+  var hash = window.location.hash;
+  if(!hash || hash.indexOf('#cf/') !== 0) return;
+  var parts  = hash.replace('#cf/', '').split('/');
+  var txnid  = decodeURIComponent(parts[0] || '');
+  var name   = decodeURIComponent(parts[1] || '');
+  var amount = parseFloat(decodeURIComponent(parts[2] || CFG.baseAmount)) || CFG.baseAmount;
+  if(!txnid) return;
+  var cfOid  = txnid;
 
   // Restore fd from sessionStorage if available
   try {
@@ -416,13 +429,31 @@ function handleCashfreeReturn() {
     .then(function(res) {
       hideLoader();
       if(res.status === 'PAID') {
-        saveToSheet({
+        // Restore full fd from sessionStorage for complete data including email
+        var fullData = {
           studentName: name, gateway: 'Cashfree', status: 'Paid',
           paymentId: res.cf_payment_id || verifyId,
           finalAmount: amount, program: CFG.program
-        });
+        };
+        try {
+          var savedFd = sessionStorage.getItem('atg_fd');
+          if(savedFd) {
+            var sfd = JSON.parse(savedFd);
+            fullData.parentName   = sfd.parentName   || '';
+            fullData.contactPhone = sfd.contactPhone || '';
+            fullData.contactEmail = sfd.contactEmail || '';
+            fullData.schoolName   = sfd.schoolName   || '';
+            fullData.city         = sfd.city         || '';
+            fullData.classGrade   = sfd.classGrade   || '';
+            fullData.gender       = sfd.gender       || '';
+            fullData.baseAmount   = sfd.baseAmount   || CFG.baseAmount;
+            fullData.discountCode = sessionStorage.getItem('atg_discCode') || '';
+            fullData.discountAmt  = parseFloat(sessionStorage.getItem('atg_discAmt')||'0') || 0;
+          }
+        } catch(e) {}
+        saveToSheet(fullData);
         showSuccessScreen({
-          studentName: name, gateway: 'Cashfree',
+          studentName: fullData.studentName, gateway: 'Cashfree',
           paymentId: res.cf_payment_id || verifyId,
           finalAmount: amount
         });
@@ -441,7 +472,8 @@ function handleCashfreeReturn() {
 }
 
 // ── INIT ─────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function() {
+// Script loads in footer so DOM is always ready - just run directly
+(function init() {
   // Scope input listeners to registration card only
   var card = el('atgCard');
   if(card) {
@@ -453,14 +485,9 @@ document.addEventListener('DOMContentLoaded', function() {
       });
     });
   }
-  // Handle Cashfree return
+  // Handle Cashfree return if params present
   handleCashfreeReturn();
-});
-
-// If DOM already loaded, run immediately
-if(document.readyState !== 'loading') {
-  handleCashfreeReturn();
-}
+})();
 
 // ── EXPOSE TO HTML onclick= HANDLERS ────────────────────────────
 window.goToPayment   = goToPayment;
@@ -470,5 +497,8 @@ window.applyDiscount = applyDiscount;
 window.startPayment  = startPayment;
 window.retryPayment  = retryPayment;
 window.startCashfree = startCashfree;
+window.show          = show;
+window.renderGateways = renderGateways;
+window.updateAmountDisplay = updateAmountDisplay;
 
 console.log('[ATG] Registration script loaded. startCashfree:', typeof startCashfree);
