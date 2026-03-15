@@ -2,7 +2,7 @@
 // Cashfree + Razorpay | thynksuccess.com/registration/
 
 var CFG = {
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbwjq4dryo5WlhIMF0C7sg600Em5EAARiVnjLNaf6Iys7lM9XusNEqK55CZRR42mnSRZFA/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbyr3R7l21Z8SSD9QfDTGvv4rJLT0e5LjXEP4l82AcQTuOxou57wY0qZbQwuba1PWsYQ-A/exec',
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
   baseAmount:    1200,
   program:       'ATGenius Coaching Program',
@@ -185,6 +185,11 @@ async function applyDiscount() {
 
 // ── SAVE TO SHEET ────────────────────────────────────────────────
 async function saveToSheet(d) {
+  // Don't save blank entries
+  if(!d.studentName || d.studentName.trim() === '') {
+    console.log('[ATG] Skipped blank saveToSheet');
+    return;
+  }
   try {
     var payload = btoa(unescape(encodeURIComponent(JSON.stringify(d))));
     await fetch(CFG.sheetsURL + '?action=save&data=' + encodeURIComponent(payload) + '&_t=' + Date.now());
