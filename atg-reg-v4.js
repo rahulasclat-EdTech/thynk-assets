@@ -332,6 +332,12 @@ async function startCashfree() {
     await loadCashfree();
     hideLoader();
 
+    // Save form data before redirect so we can restore on return
+    try {
+      sessionStorage.setItem('atg_fd', JSON.stringify(fd));
+      sessionStorage.setItem('atg_finalAmt', String(finalAmt));
+    } catch(e) {}
+
     var cashfree = window.Cashfree({ mode: 'production' });
     cashfree.checkout({
       paymentSessionId: result.payment_session_id,
@@ -375,10 +381,24 @@ function handleCashfreeReturn() {
 
   if(!cfOid && !txnid) return;
 
+  // Restore fd from sessionStorage if available
+  try {
+    var savedFd  = sessionStorage.getItem('atg_fd');
+    var savedAmt = sessionStorage.getItem('atg_finalAmt');
+    if(savedFd)  fd = JSON.parse(savedFd);
+    if(savedAmt) finalAmt = parseFloat(savedAmt) || amount;
+    else finalAmt = amount;
+  } catch(e) { finalAmt = amount; }
+
   window.history.replaceState({}, '', window.location.pathname);
   var verifyId = txnid || cfOid;
 
+  // Show step2 immediately so user sees payment page while verifying
+  show('step1', false); show('step2', true); setStep(2);
+  renderGateways();
+  updateAmountDisplay();
   showLoader('Verifying payment...');
+
   fetch(CFG.sheetsURL + '?action=cfverify&txnid=' + encodeURIComponent(verifyId) + '&_t=' + Date.now())
     .then(function(r){ return r.json(); })
     .then(function(res) {
@@ -399,16 +419,11 @@ function handleCashfreeReturn() {
           studentName: name, gateway: 'Cashfree', status: 'Cancelled',
           paymentId: verifyId, finalAmount: amount, program: CFG.program
         });
-        show('step1', false); show('step2', true); setStep(2);
-        renderGateways();
-        updateAmountDisplay();
         showToast('Payment cancelled. Please select a gateway and try again.', 'err');
       }
     })
     .catch(function() {
       hideLoader();
-      show('step1', false); show('step2', true); setStep(2);
-      renderGateways();
       showToast('Could not verify payment. Please try again.', 'err');
     });
 }
