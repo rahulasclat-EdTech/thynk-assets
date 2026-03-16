@@ -448,7 +448,7 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
             <thead>
               <tr>
                 <th>#</th><th>Date</th><th>Student</th><th>Class</th>
-                <th>School</th><th>City</th><th>Parent</th><th>Phone</th>
+                <th>School</th><th>City</th><th>Country</th><th>Parent</th><th>Phone</th>
                 <th>Gateway</th><th>Amount</th><th>Status</th><th>Discount</th>
               </tr>
             </thead>
@@ -542,7 +542,7 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
             <div class="chart-wrap"><canvas id="chartCity"></canvas></div>
           </div>
         </div>
-        <!-- Country Distribution -->
+        <!-- Country & Currency Charts -->
         <div class="charts-grid">
           <div class="chart-card">
             <div class="chart-header"><div><div class="chart-title">🌍 Country Distribution</div><div class="chart-sub">India vs International</div></div></div>
@@ -642,7 +642,7 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
 <div id="toast"></div>
 
 <script>
-const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwRcE9MznJPU8xPa1K8rO_8QdjJmgyyqHBUa_jYJRkgF1SU86SxTzRtDgTEnrtHdcXsng/exec';
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwnATxpSt9XN2IFeJ7DTgKptRtqjbXeIxksIZVHwf5ZhlWpPFExCDkIT4Q_V82PvLIo2g/exec';
 const PASSWORD   = 'Thynk@2026';
 
 let allRows = [];
@@ -805,7 +805,7 @@ function renderTable() {
 
   const tb = document.getElementById('tableBody');
   if (!tb) return;
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="12" class="table-empty">No records found</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="13" class="table-empty">No records found</td></tr>'; return; }
 
   tb.innerHTML = rows.map((r,i) => {
     const sc2 = (r.status||'pending').toLowerCase();
@@ -1105,6 +1105,7 @@ function renderRevGWChart() {
 function renderAnalyticsCharts() {
   setTimeout(() => {
     renderGenderChart(); renderCityChart(); renderSchoolChart();
+    renderCountryChart(); renderCurrencyChart();
     renderInsightCards();
   }, 50);
 }
