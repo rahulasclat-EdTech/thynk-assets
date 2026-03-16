@@ -2,7 +2,7 @@
 // Cashfree + Razorpay | thynksuccess.com/registration/
 
 var CFG = {
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbwnATxpSt9XN2IFeJ7DTgKptRtqjbXeIxksIZVHwf5ZhlWpPFExCDkIT4Q_V82PvLIo2g/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbzAi6wWA5mH8wdZLgpVN4-Z3zYihtBknPMlV658wWZktJ3_7eoQxI0GGrJH7kDZNO6b7Q/exec',
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
   baseAmount:    1200,   // India default — updated after geo detection
   program:       'ATGenius Coaching Program',
