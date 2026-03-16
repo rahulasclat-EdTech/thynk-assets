@@ -288,7 +288,7 @@ async function startRazorpay() {
           baseAmount: CFG.baseAmount, discountCode: discCode,
           discountAmt: discAmt, finalAmount: finalAmt,
           paymentId: response.razorpay_payment_id, program: CFG.program,
-          currency: GEO.currency, country: GEO.country
+          currency: GEO.currency, country: GEO.countryName || GEO.country
         });
         hideLoader();
         showSuccessScreen({
@@ -300,10 +300,15 @@ async function startRazorpay() {
       },
       modal: { ondismiss: async function() {
         await saveToSheet({
-          studentName: fd.studentName, gateway: 'Razorpay', status: 'Cancelled',
+          studentName: fd.studentName, parentName: fd.parentName,
+          contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
+          schoolName: fd.schoolName, city: fd.city,
+          classGrade: fd.classGrade, gender: fd.gender,
+          gateway: 'Razorpay', status: 'Cancelled',
           baseAmount: CFG.baseAmount, discountCode: discCode,
           discountAmt: discAmt, finalAmount: finalAmt,
-          paymentId: '', program: CFG.program
+          paymentId: '', program: CFG.program,
+          currency: GEO.currency, country: GEO.countryName || GEO.country
         });
         if(el('payBtn')) el('payBtn').disabled = false;
         showToast('Payment cancelled. Please try again.', 'err');
@@ -311,11 +316,16 @@ async function startRazorpay() {
     });
     rzp.on('payment.failed', async function(resp) {
       await saveToSheet({
-        studentName: fd.studentName, gateway: 'Razorpay', status: 'Failed',
+        studentName: fd.studentName, parentName: fd.parentName,
+        contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
+        schoolName: fd.schoolName, city: fd.city,
+        classGrade: fd.classGrade, gender: fd.gender,
+        gateway: 'Razorpay', status: 'Failed',
         baseAmount: CFG.baseAmount, discountCode: discCode,
         discountAmt: discAmt, finalAmount: finalAmt,
         paymentId: (resp.error.metadata && resp.error.metadata.payment_id) || '',
-        program: CFG.program
+        program: CFG.program,
+        currency: GEO.currency, country: GEO.countryName || GEO.country
       });
       if(el('payBtn')) el('payBtn').disabled = false;
       showToast('Payment failed. Please try again.', 'err');
@@ -353,7 +363,8 @@ async function startCashfree() {
       gateway: 'Cashfree', status: 'Initiated',
       baseAmount: CFG.baseAmount, discountCode: discCode,
       discountAmt: discAmt, finalAmount: finalAmt,
-      paymentId: txnid, program: CFG.program
+      paymentId: txnid, program: CFG.program,
+      currency: GEO.currency, country: GEO.countryName || GEO.country
     });
 
     var resp = await fetch(CFG.sheetsURL
@@ -386,6 +397,8 @@ async function startCashfree() {
     try {
       sessionStorage.setItem('atg_fd', JSON.stringify(fd));
       sessionStorage.setItem('atg_finalAmt', String(finalAmt));
+      sessionStorage.setItem('atg_country',  GEO.countryName || GEO.country || 'India');
+      sessionStorage.setItem('atg_currency', GEO.currency || 'INR');
     } catch(e) {}
 
     var cashfree = window.Cashfree({ mode: 'production' });
@@ -510,7 +523,16 @@ function handleCashfreeReturn() {
       } else {
         saveToSheet({
           studentName: name, gateway: 'Cashfree', status: 'Cancelled',
-          paymentId: verifyId, finalAmount: amount, program: CFG.program
+          paymentId: verifyId, finalAmount: amount, program: CFG.program,
+          parentName:   (fd.parentName   || ''),
+          contactPhone: (fd.contactPhone || ''),
+          contactEmail: (fd.contactEmail || ''),
+          schoolName:   (fd.schoolName   || ''),
+          city:         (fd.city         || ''),
+          classGrade:   (fd.classGrade   || ''),
+          gender:       (fd.gender       || ''),
+          currency:     (sessionStorage.getItem('atg_currency') || GEO.currency || 'INR'),
+          country:      (sessionStorage.getItem('atg_country')  || GEO.countryName || GEO.country || 'India')
         });
         showToast('Payment cancelled. Please select a gateway and try again.', 'err');
       }
