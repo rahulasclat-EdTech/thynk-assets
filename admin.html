@@ -261,6 +261,67 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
 .empty-state{text-align:center;padding:60px 20px;color:var(--m2)}
 .empty-state .emoji{font-size:48px;margin-bottom:12px}
 .empty-state p{font-size:14px}
+
+/* ── DRILL-DOWN MODAL */
+.drill-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.drill-overlay.show{display:flex}
+.drill-modal{background:var(--card);border-radius:24px;width:100%;max-width:680px;margin:20px;box-shadow:0 24px 64px rgba(0,0,0,.25);overflow:hidden;max-height:85vh;display:flex;flex-direction:column}
+.drill-head{padding:20px 24px 16px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.drill-head h3{font-family:'Sora',sans-serif;font-size:16px;font-weight:800;color:var(--text)}
+.drill-body{overflow-y:auto;padding:16px 24px}
+.drill-row{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:.15s;border-bottom:1px solid var(--bd)}
+.drill-row:last-child{border-bottom:none}
+.drill-row:hover{background:var(--acc3)}
+.drill-num{font-size:11px;color:var(--m2);width:22px;flex-shrink:0}
+.drill-name{font-weight:700;font-size:13px;flex:1}
+.drill-meta{font-size:11px;color:var(--m)}
+.drill-amt{font-family:'Sora',sans-serif;font-weight:700;font-size:13px;color:var(--acc)}
+.drill-close{width:32px;height:32px;border:none;background:var(--bg);border-radius:8px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--m)}
+.drill-count{font-size:12px;color:var(--m);margin-left:8px;font-weight:400}
+/* ── CURRENCY CARDS */
+.currency-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.currency-card{background:var(--card);border-radius:16px;padding:20px;box-shadow:var(--shadow);border:1px solid var(--bd);position:relative;overflow:hidden}
+.currency-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:16px 16px 0 0}
+.currency-card.inr::before{background:linear-gradient(90deg,#10b981,#34d399)}
+.currency-card.usd::before{background:linear-gradient(90deg,#4f46e5,#818cf8)}
+.currency-card.combined::before{background:linear-gradient(90deg,#f59e0b,#fcd34d)}
+.currency-icon{font-size:24px;margin-bottom:8px}
+.currency-label{font-size:11px;font-weight:600;color:var(--m);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.currency-val{font-family:'Sora',sans-serif;font-size:26px;font-weight:800;color:var(--text);line-height:1;margin-bottom:4px}
+.currency-sub{font-size:12px;color:var(--m2)}
+/* ── GATEWAY TABS */
+.gw-tabs{display:flex;gap:6px;background:var(--bg);padding:4px;border-radius:12px}
+.gw-tab{padding:7px 16px;border:none;border-radius:9px;font-size:12px;font-weight:600;cursor:pointer;color:var(--m);background:none;transition:.15s;font-family:'DM Sans',sans-serif}
+.gw-tab.active{background:var(--card);color:var(--acc);box-shadow:var(--shadow)}
+/* ── FOLLOW-UP ENHANCED */
+.fu-actions-full{display:flex;gap:6px;flex-shrink:0}
+.fu-btn-icon{width:34px;height:34px;border:none;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;text-decoration:none;flex-shrink:0}
+.fu-btn-icon.wa{background:#dcfce7;color:#16a34a}
+.fu-btn-icon.wa:hover{background:#bbf7d0}
+.fu-btn-icon.call{background:var(--acc3);color:var(--acc)}
+.fu-btn-icon.call:hover{background:#c7d2fe}
+.fu-btn-icon.email{background:var(--orange2);color:var(--orange)}
+.fu-btn-icon.email:hover{background:#fde68a}
+/* ── MESSAGE MODAL */
+.fu-msg-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.fu-msg-modal.show{display:flex}
+.fu-msg-box{background:var(--card);border-radius:20px;width:100%;max-width:500px;margin:20px;box-shadow:0 24px 64px rgba(0,0,0,.25);overflow:hidden}
+.fu-msg-head{padding:18px 22px 14px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.fu-msg-head h4{font-family:'Sora',sans-serif;font-size:15px;font-weight:800}
+.fu-msg-body{padding:18px 22px}
+.fu-msg-body textarea{width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;resize:vertical;min-height:100px;transition:.2s}
+.fu-msg-body textarea:focus{border-color:var(--acc)}
+.fu-msg-body input{width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:10px 12px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;margin-bottom:10px;transition:.2s}
+.fu-msg-body input:focus{border-color:var(--acc)}
+.fu-msg-footer{padding:14px 22px;border-top:1px solid var(--bd);display:flex;gap:10px;justify-content:flex-end}
+.fu-msg-footer button{padding:9px 20px;border:none;border-radius:10px;font-family:'Sora',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:.15s}
+.fu-msg-send{background:var(--acc);color:#fff}
+.fu-msg-send:hover{background:var(--acc2)}
+.fu-msg-cancel{background:var(--bg);color:var(--m)}
+.gw-stat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);border-radius:10px}
+.gw-stat-label{font-size:13px;font-weight:600;color:var(--text)}
+.gw-stat-val{font-family:'Sora',sans-serif;font-size:18px;font-weight:800;color:var(--acc)}
+.gw-stat-sub{font-size:11px;color:var(--m);margin-top:2px}
 </style>
 </head>
 <body>
@@ -354,6 +415,27 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
           </div>
         </div>
 
+        <!-- Currency Breakup -->
+        <div class="currency-grid">
+          <div class="currency-card inr">
+            <div class="currency-icon">&#127470;&#127475;</div>
+            <div class="currency-label">India (INR)</div>
+            <div class="currency-val" id="cInrRev">&#8377;0</div>
+            <div class="currency-sub" id="cInrCount">0 registrations</div>
+          </div>
+          <div class="currency-card usd">
+            <div class="currency-icon">&#127758;</div>
+            <div class="currency-label">International (USD)</div>
+            <div class="currency-val" id="cUsdRev">$0</div>
+            <div class="currency-sub" id="cUsdCount">0 registrations</div>
+          </div>
+          <div class="currency-card combined">
+            <div class="currency-icon">&#128176;</div>
+            <div class="currency-label">Combined Revenue</div>
+            <div class="currency-val" id="cCombRev">&#8377;0</div>
+            <div class="currency-sub" id="cCombCount">0 total</div>
+          </div>
+        </div>
         <!-- Stats -->
         <div class="stats-grid">
           <div class="stat-card blue"><div class="stat-icon">👥</div><div class="stat-label">Total Registrations</div><div class="stat-val" id="sTotal">—</div><div class="stat-sub">All time</div></div>
@@ -396,6 +478,22 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
           <div class="chart-card">
             <div class="chart-header"><div><div class="chart-title">🎓 Class Distribution</div><div class="chart-sub">All registrations</div></div></div>
             <div class="chart-wrap"><canvas id="chartClass"></canvas></div>
+          </div>
+        </div>
+
+        <!-- Gateway 3-View Analysis -->
+        <div class="chart-card" style="margin-bottom:20px">
+          <div class="chart-header">
+            <div><div class="chart-title">&#127974; Payment Gateway Analysis</div><div class="chart-sub" id="gwAnalysisSub">Combined — all gateways</div></div>
+            <div class="gw-tabs">
+              <button class="gw-tab active" onclick="setGWView('combined',this)">&#128257; Combined</button>
+              <button class="gw-tab" onclick="setGWView('domestic',this)">&#127470;&#127475; Domestic</button>
+              <button class="gw-tab" onclick="setGWView('international',this)">&#127758; International</button>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:center">
+            <div class="chart-wrap" style="height:200px"><canvas id="chartGWAnalysis"></canvas></div>
+            <div id="gwAnalysisStats" style="display:flex;flex-direction:column;gap:8px"></div>
           </div>
         </div>
 
@@ -447,12 +545,12 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
           <table>
             <thead>
               <tr>
-                <th>#</th><th>Date</th><th>Student</th><th>Class</th>
+                <th>#</th><th>Date</th><th>Status</th><th>Student</th><th>Gender</th><th>Class</th>
                 <th>School</th><th>City</th><th>Country</th><th>Parent</th><th>Phone</th>
-                <th>Gateway</th><th>Amount</th><th>Status</th><th>Discount</th>
+                <th>Gateway</th><th>Amount</th><th>Disc.Amt</th><th>Discount</th>
               </tr>
             </thead>
-            <tbody id="tableBody"><tr><td colspan="13" class="table-empty">Loading...</td></tr></tbody>
+            <tbody id="tableBody"><tr><td colspan="16" class="table-empty">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -694,6 +792,7 @@ async function loadData() {
     renderDailyChart();
     renderStatusChart();
     renderGWChart();
+    renderGWAnalysis();
     renderBreakdowns();
     renderClassChart();
     updateFollowUpBadge();
@@ -771,6 +870,7 @@ function renderStats() {
   document.getElementById('sSchools').textContent = schools.size;
   document.getElementById('sCities').textContent  = cities.size;
   document.getElementById('sWeek').textContent   = thisWeek;
+  renderCurrencyBreakup();
 }
 
 function parseDate(dateStr) {
@@ -805,24 +905,26 @@ function renderTable() {
 
   const tb = document.getElementById('tableBody');
   if (!tb) return;
-  if (!rows.length) { tb.innerHTML = '<tr><td colspan="13" class="table-empty">No records found</td></tr>'; return; }
+  if (!rows.length) { tb.innerHTML = '<tr><td colspan="16" class="table-empty">No records found</td></tr>'; return; }
 
   tb.innerHTML = rows.map((r,i) => {
     const sc2 = (r.status||'pending').toLowerCase();
     return '<tr onclick="showModal(' + allRows.indexOf(r) + ')">'
       + '<td style="color:var(--m2);font-size:11px">' + (i+1) + '</td>'
       + '<td style="color:var(--m);font-size:11px">' + esc(r.date||'—') + '<br><span style="color:var(--m2)">' + cleanTime(r.time||'') + '</span></td>'
-      + '<td><div style="font-weight:700">' + esc(r.studentName) + '</div><div style="font-size:11px;color:var(--m)">' + esc(r.gender||'') + '</div></td>'
+      + '<td><span class="badge badge-' + sc2 + '">' + esc(r.status||'Pending') + '</span></td>'
+      + '<td><div style="font-weight:700">' + esc(r.studentName) + '</div></td>'
+      + '<td><span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600;background:' + (r.gender==='Male'?'#eff6ff':'r.gender==="Female"?"#fdf2f8":"var(--bg)"') + ';color:' + (r.gender==='Male'?'#2563eb':'r.gender==="Female"?"#db2777":"var(--m)"') + '">' + esc(r.gender||'—') + '</span></td>'
       + '<td><span style="font-size:11px;background:var(--acc3);color:var(--acc);padding:2px 8px;border-radius:6px;font-weight:600">' + esc(r.classGrade||'—') + '</span></td>'
       + '<td class="wrap" style="font-size:12px">' + esc(r.schoolName||'—') + '</td>'
       + '<td style="font-size:12px">' + esc(r.city||'—') + '</td>'
-      + '<td style="font-size:11px">' + (r.country && r.country !== 'IN' && r.country !== 'India' ? '<span style="background:#eff6ff;color:#2563eb;padding:2px 7px;border-radius:6px;font-weight:600;font-size:10px">🌍 ' + esc(r.country) + '</span>' : '<span style="color:var(--m2)">🇮🇳 India</span>') + '</td>'
+      + '<td style="font-size:11px">' + (r.country && r.country !== 'IN' && r.country !== 'India' ? '<span style="background:#eff6ff;color:#2563eb;padding:2px 7px;border-radius:6px;font-weight:600;font-size:10px">&#127758; ' + esc(r.country) + '</span>' : '<span style="color:var(--m2)">&#127470;&#127475; India</span>') + '</td>'
       + '<td style="font-size:12px">' + esc(r.parentName||'—') + '</td>'
       + '<td><a href="tel:' + esc(r.contactPhone||'') + '" onclick="event.stopPropagation()" style="color:var(--acc);font-size:12px;text-decoration:none;font-weight:600">' + esc(r.contactPhone||'—') + '</a></td>'
       + '<td><span class="gw-tag">' + esc(r.gateway||'—') + '</span></td>'
-      + '<td><span class="amt">₹' + fmt(r.finalAmount||0) + '</span></td>'
-      + '<td><span class="badge badge-' + sc2 + '">' + esc(r.status||'Pending') + '</span></td>'
-      + '<td style="font-size:11px;color:var(--m)">' + (r.discountCode ? '🏷️ ' + esc(r.discountCode) : '—') + '</td>'
+      + '<td><span class="amt">' + (r.currency==='USD'?'$':'&#8377;') + fmt(r.finalAmount||0) + '</span></td>'
+      + '<td style="font-size:12px;color:var(--red);font-weight:600">' + (r.discountAmt ? '-&#8377;' + fmt(r.discountAmt) : '—') + '</td>'
+      + '<td style="font-size:11px;color:var(--m)">' + (r.discountCode ? '&#127991; ' + esc(r.discountCode) : '—') + '</td>'
       + '</tr>';
   }).join('');
 }
@@ -909,7 +1011,8 @@ function renderStatusChart() {
   charts.status = new Chart(ctx, {
     type:'doughnut',
     data:{labels,datasets:[{data:Object.values(counts),backgroundColor:labels.map(l=>colorMap[l]||'#94a3b8'),borderWidth:3,borderColor:'#fff',hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:12}}}},cutout:'65%'}
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:12}}}},cutout:'65%',
+    onClick:(e,els)=>{ if(els.length){const lbl=labels[els[0].index];drillDown('Status: '+lbl,allRows.filter(r=>(r.status||'Unknown')===lbl));} }}
   });
 }
 
@@ -1119,7 +1222,8 @@ function renderGenderChart() {
   charts.gender = new Chart(ctx, {
     type:'doughnut',
     data:{labels:Object.keys(counts),datasets:[{data:Object.values(counts),backgroundColor:['#4f46e5','#ec4899','#94a3b8'],borderWidth:3,borderColor:'#fff',hoverOffset:8}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},cutout:'60%'}
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}},cutout:'60%',
+    onClick:(e,els)=>{ if(els.length){const lbl=Object.keys(counts)[els[0].index];drillDown('Gender: '+lbl,allRows.filter(r=>(r.gender||'Unknown')===lbl));} }}
   });
 }
 
@@ -1133,7 +1237,8 @@ function renderCityChart() {
   charts.city = new Chart(ctx, {
     type:'bar',
     data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:'rgba(79,70,229,.7)',borderRadius:6,borderSkipped:false}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}}}
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}},
+    onClick:(e,els)=>{ if(els.length){const lbl=sorted[els[0].index][0];drillDown('City: '+lbl,allRows.filter(r=>(r.city||'Unknown')===lbl));} }}
   });
 }
 
@@ -1147,7 +1252,8 @@ function renderSchoolChart() {
   charts.school = new Chart(ctx, {
     type:'bar',
     data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:'rgba(16,185,129,.7)',borderRadius:6,borderSkipped:false}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}}}
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}},
+    onClick:(e,els)=>{ if(els.length){const lbl=sorted[els[0].index][0];drillDown('School: '+lbl,allRows.filter(r=>(r.schoolName||'Unknown')===lbl&&r.status==='Paid'));} }}
   });
 }
 
@@ -1168,7 +1274,8 @@ function renderCountryChart() {
       datasets: [{ data: sorted.map(e => e[1]), backgroundColor: PALETTE, borderRadius: 6 }]
     },
     options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
-      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } }, x:{ ticks:{ font:{ size:11 } } } } }
+      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } }, x:{ ticks:{ font:{ size:11 } } } },
+      onClick:(e,els)=>{ if(els.length){const lbl=sorted[els[0].index][0];drillDown('Country: '+lbl,allRows.filter(r=>(r.country||'India')===lbl));} } }
   });
 }
 
@@ -1185,7 +1292,8 @@ function renderCurrencyChart() {
       datasets: [{ data: [inr, usd], backgroundColor: ['#10b981','#4f46e5'], borderWidth: 2 }]
     },
     options: { responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:12 }, padding:12 } } } }
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:12 }, padding:12 } } },
+      onClick:(e,els)=>{ if(els.length){const isUsd=els[0].index===1;drillDown(isUsd?'International (USD)':'India (INR)',allRows.filter(r=>isUsd?r.currency==='USD':(!r.currency||r.currency==='INR')));} } }
   });
 }
 
@@ -1391,6 +1499,228 @@ function showToast(msg,icon){
   clearTimeout(window._tt);
   window._tt=setTimeout(()=>t.classList.remove('show'),3500);
 }
+
+
+// ═══════════════════════════════════════════════════════
+//  CURRENCY BREAKUP RENDER
+// ═══════════════════════════════════════════════════════
+function renderCurrencyBreakup() {
+  const inrRows = allRows.filter(r => !r.currency || r.currency === 'INR');
+  const usdRows = allRows.filter(r => r.currency === 'USD');
+  const inrPaid = inrRows.filter(r => r.status === 'Paid');
+  const usdPaid = usdRows.filter(r => r.status === 'Paid');
+  const inrRev  = inrPaid.reduce((s,r) => s + toNum(r.finalAmount), 0);
+  const usdRev  = usdPaid.reduce((s,r) => s + toNum(r.finalAmount), 0);
+  const totalRev = inrRev + (usdRev * 84); // approx INR equivalent
+  const total   = allRows.length;
+  const conv    = total ? Math.round((inrPaid.length + usdPaid.length) / total * 100) : 0;
+
+  const ci = document.getElementById('cInrRev');
+  const cu = document.getElementById('cUsdRev');
+  const cc = document.getElementById('cCombRev');
+  const cic = document.getElementById('cInrCount');
+  const cuc = document.getElementById('cUsdCount');
+  const ccc = document.getElementById('cCombCount');
+  if(ci) ci.textContent = '₹' + fmt(inrRev);
+  if(cu) cu.textContent = '$' + fmt(usdRev);
+  if(cc) cc.textContent = '₹' + fmt(inrRev) + (usdRev ? ' + $' + fmt(usdRev) : '');
+  if(cic) cic.textContent = inrRows.length + ' registrations · ' + inrPaid.length + ' paid';
+  if(cuc) cuc.textContent = usdRows.length + ' registrations · ' + usdPaid.length + ' paid';
+  if(ccc) ccc.textContent = total + ' total · ' + conv + '% conversion';
+}
+
+// ═══════════════════════════════════════════════════════
+//  GATEWAY 3-VIEW ANALYSIS
+// ═══════════════════════════════════════════════════════
+let gwView = 'combined';
+function setGWView(view, btn) {
+  gwView = view;
+  document.querySelectorAll('.gw-tab').forEach(b => b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderGWAnalysis();
+}
+
+function renderGWAnalysis() {
+  destroyChart('gwAnalysis');
+  const ctx = document.getElementById('chartGWAnalysis')?.getContext('2d');
+  const statsEl = document.getElementById('gwAnalysisStats');
+  const subEl = document.getElementById('gwAnalysisSub');
+  if(!ctx) return;
+
+  let rows;
+  const labels = {combined:'Combined — all gateways', domestic:'Domestic — India (INR)', international:'International (USD)'};
+  if(subEl) subEl.textContent = labels[gwView] || '';
+
+  if(gwView === 'domestic')       rows = allRows.filter(r => !r.currency || r.currency === 'INR');
+  else if(gwView === 'international') rows = allRows.filter(r => r.currency === 'USD');
+  else rows = allRows;
+
+  const paid = rows.filter(r => r.status === 'Paid');
+  const gwCounts = {}, gwRev = {};
+  paid.forEach(r => {
+    const g = r.gateway || 'Unknown';
+    gwCounts[g] = (gwCounts[g] || 0) + 1;
+    gwRev[g] = (gwRev[g] || 0) + toNum(r.finalAmount);
+  });
+
+  const gwLabels = Object.keys(gwCounts);
+  const gwData = gwLabels.map(g => gwCounts[g]);
+  const gwColors = ['#4f46e5','#10b981','#f59e0b','#ef4444','#8b5cf6'];
+  const sym = gwView === 'international' ? '$' : '₹';
+
+  charts['gwAnalysis'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: gwLabels, datasets: [{ data: gwData, backgroundColor: gwColors.slice(0, gwLabels.length), borderWidth: 3, borderColor: '#fff', hoverOffset: 8 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+      cutout: '60%',
+      onClick: (e, elements) => {
+        if(elements.length) {
+          const gw = gwLabels[elements[0].index];
+          drillDown('Gateway: ' + gw, rows.filter(r => r.gateway === gw && r.status === 'Paid'));
+        }
+      }
+    }
+  });
+
+  if(statsEl) {
+    const totalPaid = paid.length;
+    const totalRev = paid.reduce((s,r) => s + toNum(r.finalAmount), 0);
+    statsEl.innerHTML = gwLabels.map((g, i) => {
+      const pct = totalPaid ? Math.round(gwCounts[g] / totalPaid * 100) : 0;
+      return '<div class="gw-stat-row" style="cursor:pointer" onclick="drillDown(\'Gateway: ' + g + '\', allRows.filter(r=>r.gateway===\'' + g + '\'&&r.status===\'Paid\'))">'
+        + '<div><div class="gw-stat-label" style="color:' + gwColors[i] + '">' + g + '</div>'
+        + '<div class="gw-stat-sub">' + gwCounts[g] + ' paid · ' + pct + '%</div></div>'
+        + '<div class="gw-stat-val">' + sym + fmt(gwRev[g] || 0) + '</div>'
+        + '</div>';
+    }).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+//  DRILL-DOWN ENGINE
+// ═══════════════════════════════════════════════════════
+function drillDown(title, rows) {
+  const overlay = document.getElementById('drillOverlay');
+  const titleEl = document.getElementById('drillTitle');
+  const countEl = document.getElementById('drillCount');
+  const body    = document.getElementById('drillBody');
+  if(!overlay) return;
+  titleEl.textContent = title;
+  countEl.textContent = '(' + rows.length + ' records)';
+  if(!rows.length) {
+    body.innerHTML = '<div class="empty-state"><div class="emoji">📭</div><p>No records found</p></div>';
+  } else {
+    body.innerHTML = rows.map((r, i) => {
+      const sc = (r.status||'pending').toLowerCase();
+      const sym = r.currency === 'USD' ? '$' : '₹';
+      return '<div class="drill-row" onclick="closeDrill();setTimeout(()=>showModal(' + allRows.indexOf(r) + '),200)">'
+        + '<div class="drill-num">' + (i+1) + '</div>'
+        + '<div style="flex:1">'
+        + '<div class="drill-name">' + esc(r.studentName||'—') + ' <span class="badge badge-' + sc + '" style="font-size:10px">' + esc(r.status) + '</span></div>'
+        + '<div class="drill-meta">' + esc(r.classGrade||'') + ' · ' + esc(r.schoolName||'') + ' · ' + esc(r.city||'') + ' · ' + esc(r.date||'') + '</div>'
+        + '</div>'
+        + '<div style="text-align:right">'
+        + '<div class="drill-amt">' + sym + fmt(r.finalAmount||0) + '</div>'
+        + '<div class="drill-meta">' + esc(r.gateway||'') + '</div>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }
+  overlay.classList.add('show');
+}
+function closeDrill() { document.getElementById('drillOverlay')?.classList.remove('show'); }
+
+// ═══════════════════════════════════════════════════════
+//  FOLLOW-UP — WA + EMAIL MODALS
+// ═══════════════════════════════════════════════════════
+let _msgRow = null, _msgType = '';
+
+function openWAModal(idx) {
+  _msgRow = allRows[idx]; _msgType = 'wa';
+  const r = _msgRow;
+  const msg = 'Hi ' + (r.parentName||r.studentName||'') + ',\n\nThis is a reminder regarding the ATGenius Advanced Memory Program registration for ' + (r.studentName||'your child') + '.\n\nRegistration Status: ' + (r.status||'Pending') + '\nProgram Fee: ₹1,200\n\nPlease complete the payment to confirm your seat.\nRegistration link: https://thynksuccess.com/registration/\n\nFor queries, call: +91 96507 03767\n\nThank you,\nThynk Success Team';
+  document.getElementById('msgModalTitle').textContent = '💬 WhatsApp — ' + (r.studentName||'');
+  document.getElementById('msgModalBody').innerHTML =
+    '<div style="font-size:12px;color:var(--m);margin-bottom:8px">Sending to: <strong>' + esc(r.contactPhone||'') + '</strong></div>'
+    + '<textarea id="msgText" style="width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:12px;font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:140px">' + msg + '</textarea>';
+  document.getElementById('msgSendBtn').textContent = 'Open WhatsApp →';
+  document.getElementById('msgModal').classList.add('show');
+}
+
+function openEmailModal(idx) {
+  _msgRow = allRows[idx]; _msgType = 'email';
+  const r = _msgRow;
+  const subject = 'ATGenius Registration — Action Required';
+  const body = 'Dear ' + (r.parentName||'Parent') + ',\n\nWe noticed that the ATGenius registration for ' + (r.studentName||'your child') + ' is currently showing status: ' + (r.status||'Pending') + '.\n\nProgram: ATGenius Advanced Memory Program\nRegistration Fee: ₹1,200 (One license covers all children)\n\nPlease complete the registration at:\nhttps://thynksuccess.com/registration/\n\nDeadline: April 15th, 2026\n\nFor any queries, WhatsApp us: https://wa.link/ddodr6\n\nWarm regards,\nThynk Success Team';
+  document.getElementById('msgModalTitle').textContent = '✉️ Email — ' + (r.studentName||'');
+  document.getElementById('msgModalBody').innerHTML =
+    '<div style="font-size:12px;color:var(--m);margin-bottom:8px">To: <strong>' + esc(r.contactEmail||'') + '</strong></div>'
+    + '<input id="msgSubject" style="width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:10px 12px;font-family:DM Sans,sans-serif;font-size:13px;outline:none;margin-bottom:10px" value="' + esc(subject) + '">'
+    + '<textarea id="msgText" style="width:100%;border:1.5px solid var(--bd);border-radius:10px;padding:12px;font-family:DM Sans,sans-serif;font-size:13px;outline:none;resize:vertical;min-height:140px">' + body + '</textarea>';
+  document.getElementById('msgSendBtn').textContent = 'Open Email Client →';
+  document.getElementById('msgModal').classList.add('show');
+}
+
+function sendMsg() {
+  if(!_msgRow) return;
+  if(_msgType === 'wa') {
+    const text = document.getElementById('msgText')?.value || '';
+    const phone = (_msgRow.contactPhone||'').replace(/\D/g,'');
+    const fullPhone = phone.length === 10 ? '91' + phone : phone;
+    window.open('https://wa.me/' + fullPhone + '?text=' + encodeURIComponent(text), '_blank');
+  } else {
+    const subj = document.getElementById('msgSubject')?.value || '';
+    const body = document.getElementById('msgText')?.value || '';
+    window.open('mailto:' + (_msgRow.contactEmail||'') + '?subject=' + encodeURIComponent(subj) + '&body=' + encodeURIComponent(body), '_blank');
+  }
+  closeMsgModal();
+}
+function closeMsgModal() { document.getElementById('msgModal')?.classList.remove('show'); _msgRow = null; }
+
+// ═══════════════════════════════════════════════════════
+//  ADD DRILL-DOWN TO ALL EXISTING CHARTS
+// ═══════════════════════════════════════════════════════
+function addDrillToChart(chartId, labelsFn, rowsFn) {
+  // Called after chart creation to wire onclick
+  const c = charts[chartId];
+  if(!c) return;
+  c.options.onClick = function(e, elements) {
+    if(!elements.length) return;
+    const idx = elements[0].index;
+    const label = c.data.labels[idx];
+    const rows = rowsFn(label);
+    drillDown(label, rows);
+  };
+  c.update();
+}
+
 </script>
+
+<!-- DRILL-DOWN MODAL -->
+<div class="drill-overlay" id="drillOverlay" onclick="if(event.target===this)closeDrill()">
+  <div class="drill-modal">
+    <div class="drill-head">
+      <div><h3 id="drillTitle">Details</h3><span class="drill-count" id="drillCount"></span></div>
+      <button class="drill-close" onclick="closeDrill()">&#10005;</button>
+    </div>
+    <div class="drill-body" id="drillBody"></div>
+  </div>
+</div>
+<!-- MESSAGE MODAL -->
+<div class="fu-msg-modal" id="msgModal">
+  <div class="fu-msg-box">
+    <div class="fu-msg-head">
+      <h4 id="msgModalTitle">Send Message</h4>
+      <button class="drill-close" onclick="closeMsgModal()">&#10005;</button>
+    </div>
+    <div class="fu-msg-body" id="msgModalBody"></div>
+    <div class="fu-msg-footer">
+      <button class="fu-msg-cancel" onclick="closeMsgModal()">Cancel</button>
+      <button class="fu-msg-send" id="msgSendBtn" onclick="sendMsg()">Send &#8594;</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
