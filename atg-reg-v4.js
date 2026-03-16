@@ -2,13 +2,48 @@
 // Cashfree + Razorpay | thynksuccess.com/registration/
 
 var CFG = {
-  sheetsURL:     'https://script.google.com/macros/s/AKfycbyr3R7l21Z8SSD9QfDTGvv4rJLT0e5LjXEP4l82AcQTuOxou57wY0qZbQwuba1PWsYQ-A/exec',
+  sheetsURL:     'https://script.google.com/macros/s/AKfycbwRcE9MznJPU8xPa1K8rO_8QdjJmgyyqHBUa_jYJRkgF1SU86SxTzRtDgTEnrtHdcXsng/exec',
   razorpayKeyId: 'rzp_live_SQTJFYmQGDno59',
-  baseAmount:    1200,
+  baseAmount:    1200,   // India default — updated after geo detection
   program:       'ATGenius Coaching Program',
   orgName:       'Thynk Success',
   redirectURL:   'https://thynksuccess.com'
 };
+
+// ── GEO DETECTION ────────────────────────────────────────────────
+var GEO = {
+  detected:   false,
+  country:    'IN',
+  isIndia:    true,
+  currency:   'INR',
+  amount:     1200,
+  amountDisp: 'Rs.1,200',
+  symbol:     '₹'
+};
+
+function detectGeo() {
+  return fetch('https://ipapi.co/json/?fields=country_code,country_name,currency')
+    .then(function(r){ return r.json(); })
+    .then(function(d) {
+      GEO.detected   = true;
+      GEO.country    = d.country_code || 'IN';
+      GEO.isIndia    = GEO.country === 'IN';
+      if(!GEO.isIndia) {
+        GEO.currency   = 'USD';
+        GEO.amount     = 21;
+        GEO.amountDisp = '$21 USD';
+        GEO.symbol     = '$';
+      }
+      return GEO;
+    })
+    .catch(function() {
+      // On error, default to India
+      GEO.detected = true;
+      return GEO;
+    });
+}
+
+
 
 // ── HELPERS ──────────────────────────────────────────────────────
 function el(id)  { return document.getElementById(id); }
@@ -42,7 +77,7 @@ var discCode = '';
 var discAmt  = 0;
 var finalAmt = CFG.baseAmount;
 
-var GATEWAY_SEQUENCE = ['rzp', 'cf'];
+var GATEWAY_SEQUENCE = ['cf', 'rzp'];
 var GATEWAY_LABELS = {
   cf:  { name: 'Cashfree', color: '#2563eb', selClass: 'sel-cf' },
   rzp: { name: 'Razorpay', color: '#2563eb', selClass: 'sel-rzp' }
@@ -120,7 +155,9 @@ function renderGateways() {
   var container = el('gwContainer');
   if(!container) return;
   container.innerHTML = '';
-  GATEWAY_SEQUENCE.forEach(function(gw) {
+  // International users only see Razorpay
+  var seq = (window._intlUser) ? ['rzp'] : GATEWAY_SEQUENCE;
+  seq.forEach(function(gw) {
     var info = GATEWAY_LABELS[gw];
     if(!info) return;
     var div = document.createElement('div');
@@ -222,8 +259,8 @@ async function startRazorpay() {
   try {
     var rzp = new window.Razorpay({
       key:         CFG.razorpayKeyId,
-      amount:      finalAmt * 100,
-      currency:    'INR',
+      amount:      GEO.isIndia ? finalAmt * 100 : finalAmt * 100, // USD cents or INR paise
+      currency:    GEO.isIndia ? 'INR' : 'USD',
       name:        CFG.orgName,
       description: CFG.program,
       prefill:     { name: fd.studentName, email: fd.contactEmail, contact: fd.contactPhone },
@@ -243,7 +280,8 @@ async function startRazorpay() {
           gateway: 'Razorpay', status: 'Paid',
           baseAmount: CFG.baseAmount, discountCode: discCode,
           discountAmt: discAmt, finalAmount: finalAmt,
-          paymentId: response.razorpay_payment_id, program: CFG.program
+          paymentId: response.razorpay_payment_id, program: CFG.program,
+          currency: GEO.currency, country: GEO.country
         });
         hideLoader();
         showSuccessScreen({
@@ -477,9 +515,8 @@ function handleCashfreeReturn() {
 }
 
 // ── INIT ─────────────────────────────────────────────────────────
-// Script loads in footer so DOM is always ready - just run directly
 (function init() {
-  // Scope input listeners to registration card only
+  // Scope input listeners
   var card = el('atgCard');
   if(card) {
     card.querySelectorAll('input, select').forEach(function(inp) {
@@ -490,9 +527,75 @@ function handleCashfreeReturn() {
       });
     });
   }
-  // Handle Cashfree return if params present
-  handleCashfreeReturn();
+
+  // Handle Cashfree return first (no geo detection needed)
+  var params = new URLSearchParams(window.location.search);
+  if(params.get('cf_oid') || params.get('txnid')) {
+    handleCashfreeReturn();
+    return;
+  }
+
+  // Detect user location then apply geo pricing
+  showGeoLoader();
+  detectGeo().then(function(geo) {
+    hideGeoLoader();
+    applyGeoPricing(geo);
+  });
 })();
+
+function showGeoLoader() {
+  var card = el('atgCard');
+  if(!card) return;
+  // Show subtle loading overlay
+  var ov = document.createElement('div');
+  ov.id = 'geoLoader';
+  ov.style.cssText = 'position:absolute;inset:0;background:rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:16px;z-index:10';
+  ov.innerHTML = '<div style="width:36px;height:36px;border:3px solid #e2e8f0;border-top-color:#4f46e5;border-radius:50%;animation:spin .7s linear infinite"></div><p style="margin-top:12px;font-size:14px;color:#64748b;font-weight:500">Detecting your location...</p>';
+  card.style.position = 'relative';
+  card.appendChild(ov);
+}
+
+function hideGeoLoader() {
+  var ov = document.getElementById('geoLoader');
+  if(ov) ov.remove();
+}
+
+function applyGeoPricing(geo) {
+  // Update CFG with geo-based pricing
+  CFG.baseAmount = geo.amount;
+  finalAmt       = geo.amount;
+
+  // Show geo banner
+  var card = el('atgCard');
+  if(card && !geo.isIndia) {
+    var banner = document.createElement('div');
+    banner.style.cssText = 'background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px';
+    banner.innerHTML = '🌍 International pricing: <strong>$21 USD</strong> · Razorpay (International Cards)';
+    card.insertBefore(banner, card.firstChild);
+    window._intlUser = true;
+  } else if(card) {
+    var banner = document.createElement('div');
+    banner.style.cssText = 'background:#f0fdf4;color:#059669;padding:8px 20px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;margin-bottom:16px;display:flex;align-items:center;justify-content:center;gap:8px';
+    banner.innerHTML = '🇮🇳 India pricing: <strong>Rs.1,200</strong>';
+    card.insertBefore(banner, card.firstChild);
+  }
+
+  // Update amount display
+  var totalEl = el('totalAmt');
+  if(totalEl) totalEl.textContent = (geo.isIndia ? 'Rs.' : '$') + fmt(geo.amount);
+}
+
+
+
+
+function switchToIntl() {
+  GEO.isIndia = false; GEO.currency = 'USD'; GEO.amount = 21;
+  GEO.country = 'INTL'; window._intlUser = true;
+  CFG.baseAmount = 21; finalAmt = 21;
+  document.querySelectorAll('#atgCard > div[style*="background:#f0fdf4"], #atgCard > div[style*="background:linear-gradient"]').forEach(function(b){ b.remove(); });
+  applyGeoPricing(GEO);
+  renderGateways();
+}
 
 // ── EXPOSE TO HTML onclick= HANDLERS ────────────────────────────
 window.goToPayment   = goToPayment;
@@ -507,3 +610,5 @@ window.renderGateways = renderGateways;
 window.updateAmountDisplay = updateAmountDisplay;
 
 console.log('[ATG] Registration script loaded. startCashfree:', typeof startCashfree);
+
+// spin keyframe added via HTML
