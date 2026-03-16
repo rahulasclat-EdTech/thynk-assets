@@ -452,7 +452,7 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
                 <th>Gateway</th><th>Amount</th><th>Status</th><th>Discount</th>
               </tr>
             </thead>
-            <tbody id="tableBody"><tr><td colspan="12" class="table-empty">Loading...</td></tr></tbody>
+            <tbody id="tableBody"><tr><td colspan="13" class="table-empty">Loading...</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -540,6 +540,17 @@ td{padding:11px 14px;font-size:13px;vertical-align:middle}
           <div class="chart-card">
             <div class="chart-header"><div><div class="chart-title">🏙️ City Distribution</div><div class="chart-sub">Top 10 cities</div></div></div>
             <div class="chart-wrap"><canvas id="chartCity"></canvas></div>
+          </div>
+        </div>
+        <!-- Country Distribution -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-header"><div><div class="chart-title">🌍 Country Distribution</div><div class="chart-sub">India vs International</div></div></div>
+            <div class="chart-wrap"><canvas id="chartCountry"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div><div class="chart-title">💱 Currency Split</div><div class="chart-sub">INR vs USD registrations</div></div></div>
+            <div class="chart-wrap"><canvas id="chartCurrency"></canvas></div>
           </div>
         </div>
         <div class="charts-grid">
@@ -805,6 +816,7 @@ function renderTable() {
       + '<td><span style="font-size:11px;background:var(--acc3);color:var(--acc);padding:2px 8px;border-radius:6px;font-weight:600">' + esc(r.classGrade||'—') + '</span></td>'
       + '<td class="wrap" style="font-size:12px">' + esc(r.schoolName||'—') + '</td>'
       + '<td style="font-size:12px">' + esc(r.city||'—') + '</td>'
+      + '<td style="font-size:11px">' + (r.country && r.country !== 'IN' && r.country !== 'India' ? '<span style="background:#eff6ff;color:#2563eb;padding:2px 7px;border-radius:6px;font-weight:600;font-size:10px">🌍 ' + esc(r.country) + '</span>' : '<span style="color:var(--m2)">🇮🇳 India</span>') + '</td>'
       + '<td style="font-size:12px">' + esc(r.parentName||'—') + '</td>'
       + '<td><a href="tel:' + esc(r.contactPhone||'') + '" onclick="event.stopPropagation()" style="color:var(--acc);font-size:12px;text-decoration:none;font-weight:600">' + esc(r.contactPhone||'—') + '</a></td>'
       + '<td><span class="gw-tag">' + esc(r.gateway||'—') + '</span></td>'
@@ -829,6 +841,8 @@ function showModal(idx) {
     ['Gender',      esc(r.gender||'—')],
     ['School',      esc(r.schoolName||'—')],
     ['City',        esc(r.city||'—')],
+    ['Country',     esc(r.country||'India')],
+    ['Currency',    esc(r.currency||'INR')],
     ['Parent',      esc(r.parentName||'—')],
     ['Phone',       '<a href="tel:' + esc(r.contactPhone||'') + '" style="color:var(--acc);font-weight:600">' + esc(r.contactPhone||'—') + '</a>'],
     ['Email',       '<a href="mailto:' + esc(r.contactEmail||'') + '" style="color:var(--acc);font-size:12px">' + esc(r.contactEmail||'—') + '</a>'],
@@ -1133,6 +1147,44 @@ function renderSchoolChart() {
     type:'bar',
     data:{labels:sorted.map(e=>e[0]),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:'rgba(16,185,129,.7)',borderRadius:6,borderSkipped:false}]},
     options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,ticks:{stepSize:1},grid:{color:'rgba(0,0,0,.05)'}},y:{grid:{display:false}}}}
+  });
+}
+
+function renderCountryChart() {
+  destroyChart('country');
+  const ctx = document.getElementById('chartCountry')?.getContext('2d');
+  if (!ctx) return;
+  const counts = {};
+  allRows.forEach(r => {
+    const key = (r.country && r.country.trim()) ? r.country.trim() : 'India';
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  const sorted = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0,10);
+  charts['country'] = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: sorted.map(e => e[0]),
+      datasets: [{ data: sorted.map(e => e[1]), backgroundColor: PALETTE, borderRadius: 6 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } }, x:{ ticks:{ font:{ size:11 } } } } }
+  });
+}
+
+function renderCurrencyChart() {
+  destroyChart('currency');
+  const ctx = document.getElementById('chartCurrency')?.getContext('2d');
+  if (!ctx) return;
+  const inr = allRows.filter(r => !r.currency || r.currency === 'INR').length;
+  const usd = allRows.filter(r => r.currency === 'USD').length;
+  charts['currency'] = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['INR (India)', 'USD (International)'],
+      datasets: [{ data: [inr, usd], backgroundColor: ['#10b981','#4f46e5'], borderWidth: 2 }]
+    },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom', labels:{ font:{ size:12 }, padding:12 } } } }
   });
 }
 
