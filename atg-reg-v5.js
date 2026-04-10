@@ -82,7 +82,8 @@ var finalAmt = CFG.baseAmount;
 var GATEWAY_SEQUENCE = ['cf', 'rzp'];
 var GATEWAY_LABELS = {
   cf:  { name: 'Cashfree', color: '#2563eb', selClass: 'sel-cf' },
-  rzp: { name: 'Razorpay', color: '#2563eb', selClass: 'sel-rzp' }
+  rzp: { name: 'Razorpay', color: '#2563eb', selClass: 'sel-rzp' },
+  pp:  { name: 'PayPal',   color: '#003087', selClass: 'sel-pp'  }
 };
 
 // ── VALIDATION ───────────────────────────────────────────────────
@@ -161,8 +162,8 @@ function renderGateways() {
   var container = el('gwContainer');
   if(!container) return;
   container.innerHTML = '';
-  // International users only see Razorpay
-  var seq = (window._intlUser) ? ['rzp'] : GATEWAY_SEQUENCE;
+  // International users only see PayPal
+  var seq = (window._intlUser) ? ['pp'] : GATEWAY_SEQUENCE;
   seq.forEach(function(gw) {
     var info = GATEWAY_LABELS[gw];
     if(!info) return;
@@ -177,7 +178,7 @@ function renderGateways() {
 
 function selectGW(gw) {
   selGW = gw;
-  GATEWAY_SEQUENCE.forEach(function(g) {
+  Object.keys(GATEWAY_LABELS).forEach(function(g) {
     var btn = el('gw' + g.charAt(0).toUpperCase() + g.slice(1));
     if(btn) btn.className = 'gw-btn' + (gw === g ? ' ' + GATEWAY_LABELS[g].selClass : '');
   });
@@ -247,6 +248,7 @@ function startPayment() {
   if(!selGW) { showToast('Please select a payment method.', 'err'); return; }
   if(selGW === 'rzp') startRazorpay();
   else if(selGW === 'cf') startCashfree();
+  else if(selGW === 'pp') startPayPal();
 }
 
 // ── RAZORPAY ─────────────────────────────────────────────────────
@@ -334,6 +336,129 @@ async function startRazorpay() {
   } catch(e) {
     if(el('payBtn')) el('payBtn').disabled = false;
     showToast('Could not open Razorpay. Please refresh and try again.', 'err');
+  }
+}
+
+// ── PAYPAL ───────────────────────────────────────────────────────
+var CFG_PAYPAL_CLIENT_ID = 'AZbRCrTRSO1_dAvLgOzVXKPL0S3Kb2ZiHS2dN6LwRHjoQnrXZ8JT8otYbEFQT3MRWNIIfemWFQaZPv1_'; // ← replace with your PayPal client ID
+
+function loadPayPalSDK() {
+  return new Promise(function(resolve, reject) {
+    if(window.paypal) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://www.paypal.com/sdk/js?client-id=' + CFG_PAYPAL_CLIENT_ID + '&currency=USD&intent=capture';
+    s.onload  = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function startPayPal() {
+  if(el('payBtn')) el('payBtn').disabled = true;
+  showLoader('Loading PayPal...');
+
+  try {
+    await loadPayPalSDK();
+    hideLoader();
+
+    // Create a modal overlay with PayPal button container
+    var overlay = document.createElement('div');
+    overlay.id = 'ppOverlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    overlay.innerHTML =
+      '<div style="background:#fff;border-radius:16px;padding:28px 24px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3)">'
+    + '<div style="font-family:Sora,sans-serif;font-size:16px;font-weight:700;color:#0f172a;margin-bottom:4px">Complete Payment</div>'
+    + '<div style="font-size:13px;color:#64748b;margin-bottom:20px">ATGenius Program · <strong>$' + finalAmt + ' USD</strong></div>'
+    + '<div id="ppButtons"></div>'
+    + '<button onclick="document.getElementById(\'ppOverlay\').remove();document.getElementById(\'payBtn\').disabled=false;" '
+    + 'style="width:100%;margin-top:14px;padding:10px;border:1.5px solid #e2e8f0;border-radius:10px;background:#fff;color:#64748b;font-size:13px;cursor:pointer">Cancel</button>'
+    + '</div>';
+    document.body.appendChild(overlay);
+
+    window.paypal.Buttons({
+      style: { layout: 'vertical', color: 'gold', shape: 'rect', label: 'pay' },
+
+      createOrder: function(data, actions) {
+        return actions.order.create({
+          purchase_units: [{
+            amount: { value: String(finalAmt), currency_code: 'USD' },
+            description: CFG.program
+          }],
+          payer: {
+            name: { given_name: fd.studentName },
+            email_address: fd.contactEmail
+          }
+        });
+      },
+
+      onApprove: async function(data, actions) {
+        var ppOverlay = document.getElementById('ppOverlay');
+        if(ppOverlay) ppOverlay.remove();
+        showLoader('Confirming PayPal payment...');
+        var details = await actions.order.capture();
+        var paymentId = details.id || data.orderID;
+        await saveToSheet({
+          studentName: fd.studentName, parentName: fd.parentName,
+          contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
+          schoolName: fd.schoolName, city: fd.city,
+          classGrade: fd.classGrade, gender: fd.gender,
+          gateway: 'PayPal', status: 'Paid',
+          baseAmount: CFG.baseAmount, discountCode: discCode,
+          discountAmt: discAmt, finalAmount: finalAmt,
+          paymentId: paymentId, program: CFG.program,
+          currency: 'USD', country: GEO.countryName || GEO.country
+        });
+        hideLoader();
+        showSuccessScreen({
+          studentName: fd.studentName, gateway: 'PayPal',
+          paymentId: paymentId, finalAmount: finalAmt,
+          classGrade: fd.classGrade, schoolName: fd.schoolName,
+          city: fd.city, discountCode: discCode, discountAmt: discAmt
+        });
+      },
+
+      onCancel: async function() {
+        var ppOverlay = document.getElementById('ppOverlay');
+        if(ppOverlay) ppOverlay.remove();
+        if(el('payBtn')) el('payBtn').disabled = false;
+        await saveToSheet({
+          studentName: fd.studentName, parentName: fd.parentName,
+          contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
+          schoolName: fd.schoolName, city: fd.city,
+          classGrade: fd.classGrade, gender: fd.gender,
+          gateway: 'PayPal', status: 'Cancelled',
+          baseAmount: CFG.baseAmount, discountCode: discCode,
+          discountAmt: discAmt, finalAmount: finalAmt,
+          paymentId: '', program: CFG.program,
+          currency: 'USD', country: GEO.countryName || GEO.country
+        });
+        showToast('PayPal payment cancelled. Please try again.', 'err');
+      },
+
+      onError: async function(err) {
+        var ppOverlay = document.getElementById('ppOverlay');
+        if(ppOverlay) ppOverlay.remove();
+        if(el('payBtn')) el('payBtn').disabled = false;
+        await saveToSheet({
+          studentName: fd.studentName, parentName: fd.parentName,
+          contactPhone: fd.contactPhone, contactEmail: fd.contactEmail,
+          schoolName: fd.schoolName, city: fd.city,
+          classGrade: fd.classGrade, gender: fd.gender,
+          gateway: 'PayPal', status: 'Failed',
+          baseAmount: CFG.baseAmount, discountCode: discCode,
+          discountAmt: discAmt, finalAmount: finalAmt,
+          paymentId: '', program: CFG.program,
+          currency: 'USD', country: GEO.countryName || GEO.country
+        });
+        showToast('PayPal error. Please try again.', 'err');
+      }
+
+    }).render('#ppButtons');
+
+  } catch(e) {
+    hideLoader();
+    if(el('payBtn')) el('payBtn').disabled = false;
+    showToast('Could not load PayPal. Please try again.', 'err');
   }
 }
 
@@ -598,6 +723,7 @@ window.goBack        = goBack;
 window.selectGW      = selectGW;
 window.applyDiscount = applyDiscount;
 window.startPayment  = startPayment;
+window.startPayPal   = startPayPal;
 window.retryPayment  = retryPayment;
 window.startCashfree = startCashfree;
 window.show          = show;
