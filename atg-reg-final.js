@@ -162,7 +162,7 @@ var rules = {
   schoolName:   function(v){ return v.trim().length >= 2; },
   city:         function(v){ return v.trim().length >= 2; },
   parentName:   function(v){ return v.trim().length >= 2; },
-  contactPhone: function(v){ return /^[6-9]\d{9}$/.test(v.trim()); },
+  contactPhone: function(v){ return v.trim().length > 0; },
   contactEmail: function(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim()); }
 };
 
