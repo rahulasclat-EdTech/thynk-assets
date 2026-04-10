@@ -270,7 +270,7 @@ async function startRazorpay() {
       currency:    GEO.isIndia ? 'INR' : 'USD',
       name:        CFG.orgName,
       description: CFG.program,
-      prefill:     { name: fd.studentName, email: fd.contactEmail, contact: fd.contactPhone },
+      prefill:     { name: fd.studentName, email: fd.contactEmail, contact: GEO.isIndia ? fd.contactPhone : '' },
       notes: {
         student_name: fd.studentName, parent_name:  fd.parentName,
         school:       fd.schoolName,  city:          fd.city,
