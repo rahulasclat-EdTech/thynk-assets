@@ -340,7 +340,7 @@ async function startRazorpay() {
 }
 
 // ── PAYPAL ───────────────────────────────────────────────────────
-var CFG_PAYPAL_CLIENT_ID = 'YOUR_PAYPAL_CLIENT_ID'; // ← replace with your PayPal client ID
+var CFG_PAYPAL_CLIENT_ID = 'AZbRCrTRSO1_dAvLgOzVXKPL0S3Kb2ZiHS2dN6LwRHjoQnrXZ8JT8otYbEFQT3MRWNIIfemWFQaZPv1_'; // ← replace with your PayPal client ID
 
 function loadPayPalSDK() {
   return new Promise(function(resolve, reject) {
