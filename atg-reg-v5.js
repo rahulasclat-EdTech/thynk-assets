@@ -729,6 +729,7 @@ window.startCashfree = startCashfree;
 window.show          = show;
 window.renderGateways = renderGateways;
 window.updateAmountDisplay = updateAmountDisplay;
+window.switchToIntl  = switchToIntl;
 
 console.log('[ATG v5] Registration script loaded. startCashfree:', typeof startCashfree);
 
